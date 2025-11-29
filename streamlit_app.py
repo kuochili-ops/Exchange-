@@ -21,7 +21,7 @@ FLAGS = {
     "TWD": "🇹🇼", "USD": "🇺🇸", "JPY": "🇯🇵", "EUR": "🇪🇺", "CNY": "🇨🇳",
     "HKD": "🇭🇰", "GBP": "🇬🇧", "AUD": "🇦🇺", "SGD": "🇸🇬", "KRW": "🇰🇷",
     "CAD": "🇨🇦", "CHF": "🇨🇭", "ZAR": "🇿🇦", "SEK": "🇸🇪", "NZD": "🇳🇿",
-    "THB": "🇹🇹", "PHP": "🇵🇭", "IDR": "🇮🇩", "VND": "🇻🇳", "MYR": "🇲🇾",
+    "THB": "🇹🇭", "PHP": "🇵🇭", "IDR": "🇮🇩", "VND": "🇻🇳", "MYR": "🇲🇾",
     "DKK": "🇩🇰", "IDR": "🇮🇩", "INR": "🇮🇳", "RUB": "🇷🇺", "SAR": "🇸🇦",
 }
 
@@ -119,13 +119,12 @@ def fetch_rates():
             if not code:
                 continue
 
+            # 使用「即期賣出」作為參考匯率，若無則使用「即期買入」
             buy = _to_float(row.get('即期買入') or row.get('Spot Buy') or None)
             sell = _to_float(row.get('即期賣出') or row.get('Spot Sell') or None)
             
             val = None
-            if buy is not None and sell is not None and buy > 0 and sell > 0:
-                val = (buy + sell) / 2.0
-            elif sell is not None and sell > 0:
+            if sell is not None and sell > 0:
                 val = sell
             elif buy is not None and buy > 0:
                 val = buy
@@ -164,23 +163,24 @@ section.main .block-container {
 }
 
 /* 貨幣選擇列：確保 5 欄顯示 */
-/* 針對 st.columns 結構進行優化 */
-div[data-testid="stHorizontalBlock"] > div:nth-child(1) > div:nth-child(1) {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px; /* 增加間距 */
+/* 鎖定 st.columns 結構的容器，強制 Grid 佈局 */
+div[data-testid="stHorizontalBlock"] > div:nth-child(1) {
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 10px; 
 }
 
-/* 計算機按鍵容器：強制 4 欄顯示 (最重要的修正) */
+
+/* 計算機按鍵容器：強制 4 欄顯示 (最重要且最激進的修正) */
+/* 鎖定 st.container 的內部元素，並將其轉為 Grid */
 .calculator-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr); /* 強制 4 等分欄位 */
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important; /* 強制 4 等分欄位 */
     gap: 10px; /* 增加按鍵間距 */
 }
 
-/* 讓計算機按鍵的父元素（st-emotion-xyz，即 st.button 的容器）能夠填滿 grid cell */
+/* 讓 Streamlit 產生的按鈕容器（div）填滿 Grid Cell */
 .calculator-grid > div {
-    /* 讓按鈕的 Streamlit 容器填滿網格空間 */
     width: 100% !important; 
     margin: 0 !important;
 }
@@ -190,10 +190,8 @@ div[data-testid="stHorizontalBlock"] > div:nth-child(1) > div:nth-child(1) {
     font-size: 16px;
     font-weight: bold;
     border-radius: 8px;
-    /* 關鍵：避免固定 padding 擠壓窄螢幕排版 */
     padding-top: 10px;
     padding-bottom: 10px;
-    /* 確保按鈕填滿 grid cell */
     width: 100% !important; 
 }
 
@@ -232,22 +230,31 @@ rates, fetch_err = fetch_rates()
 
 # Fallback data
 if not rates:
-    st.sidebar.error("❌ 匯率抓取失敗，請檢查 BOT 網站連線或點擊下方刷新按鈕。")
-    st.sidebar.warning("⚠️ 目前使用備用匯率資料 (TWD=1, USD=32.5, JPY=0.21, EUR=35.0)")
-    rates = {"TWD":1.0, "USD":32.5, "JPY":0.21, "EUR":35.0, "CNY":4.5, "HKD":4.1}
+    st.sidebar.error("❌ 網路匯率獲取失敗")
+    st.sidebar.warning(
+        "⚠️ 台灣銀行伺服器可能阻擋了 Streamlit Cloud (國外IP) 的連線。目前使用**備用匯率資料**。"
+    )
+    # 使用稍微更貼近現實的固定備用匯率
+    rates = {
+        "TWD": 1.0, "USD": 32.50, "JPY": 0.208, "EUR": 34.50, 
+        "CNY": 4.48, "HKD": 4.12, "KRW": 0.024
+    }
+    st.session_state.rates_updated = "備用數據"
 else:
     # 只在第一次成功抓取時更新時間
-    if not st.session_state.rates_updated:
+    if st.session_state.rates_updated == "備用數據" or not st.session_state.rates_updated:
         st.session_state.rates_updated = time.strftime("%Y-%m-%d %H:%M:%S")
-    st.sidebar.success("✅ 匯率更新成功")
+    st.sidebar.success("✅ 匯率更新成功 (資料來自台灣銀行)")
 
 # 側邊欄資訊
 st.sidebar.title("設定與資訊")
 st.sidebar.info(f"資料來源: 台灣銀行 (BOT)\n更新時間: {st.session_state.rates_updated}")
 
+if st.session_state.rates_updated == "備用數據":
+     st.sidebar.info("請點擊下方按鈕，嘗試重新連線至台灣銀行。")
+
 if st.sidebar.button("🔄 強制重新抓取匯率"):
     st.cache_data.clear()
-    # 重新執行時，fetch_rates 會被再次呼叫
     safe_rerun()
 
 st.sidebar.markdown("---")
@@ -341,7 +348,7 @@ def do_calculate():
 # 5. 計算機按鍵佈局
 st.markdown("---")
 
-# **關鍵修正：使用 st.container 並應用 .calculator-grid 樣式，強制 4 欄顯示**
+# **使用 st.container 並應用 .calculator-grid 樣式，強制 4 欄顯示**
 with st.container(border=False):
     st.markdown('<div class="calculator-grid">', unsafe_allow_html=True)
     
