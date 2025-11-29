@@ -67,8 +67,8 @@ def _to_float(x):
 def fetch_rates():
     """
     回傳 (rates_dict, error_message)
-    rates_dict: { 'USD': 31.2, ... } 或空 dict
-    error_message: None 或字串
+    若成功： (rates, None)
+    若失敗： ({}, "錯誤訊息")
     """
     try:
         r = requests.get(BOT_CSV_URL, timeout=12)
@@ -103,14 +103,30 @@ def fetch_rates():
     rates['TWD'] = 1.0
     return rates, None
 
-# ---------- Streamlit UI 與狀態管理 ----------
+# ---------- safe rerun（避免 AttributeError） ----------
+def safe_rerun():
+    """
+    嘗試呼叫 st.experimental_rerun()，若不存在則改為設定一個 session flag。
+    這樣可以避免在某些 Streamlit 版本出現 AttributeError。
+    """
+    try:
+        if hasattr(st, "experimental_rerun"):
+            st.experimental_rerun()
+        else:
+            # 若沒有 experimental_rerun，設定 flag 讓 UI 重新渲染（Streamlit 會在下一次互動時重繪）
+            st.session_state._need_rerun = True
+    except AttributeError:
+        st.session_state._need_rerun = True
+
+# ---------- UI 與狀態管理 ----------
 st.set_page_config(page_title="匯率計算機", layout="wide")
+
 # 少量 CSS 改善窄螢幕顯示
 st.markdown("""
 <style>
-/* 讓按鈕字體小一點、按鈕間距更緊湊 */
+/* 按鈕更緊湊、字體稍小，手機上更友善 */
 .stButton>button { padding: 6px 8px; font-size: 14px; }
-div.row-widget.stRadio > label { font-size:14px; }
+section.main .block-container { padding-top: 12px; padding-left: 12px; padding-right: 12px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -125,25 +141,17 @@ if 'displayed' not in st.session_state:
 if 'selected' not in st.session_state: st.session_state.selected = 'TWD'
 if 'rates_updated' not in st.session_state: st.session_state.rates_updated = ''
 
-# 取得匯率（回傳可能是 (rates, error) 或 {}）
-rates_result = fetch_rates()
-# fetch_rates 使用 st.cache_data 回傳 (rates, error) 或 {}，兼容性處理：
-if isinstance(rates_result, tuple):
-    rates, fetch_err = rates_result
-else:
-    # 舊版或 fallback 回傳 dict only
-    rates = rates_result if isinstance(rates_result, dict) else {}
-    fetch_err = None if rates else "無匯率資料"
+# 取得匯率
+rates, fetch_err = fetch_rates()
 
-# 顯示匯率狀態在 sidebar，方便除錯
+# sidebar 顯示狀態
 st.sidebar.markdown("**匯率來源**: BOT 匯率 CSV")
 if fetch_err:
     st.sidebar.error(fetch_err)
-    st.sidebar.write("使用 fallback 或暫無資料")
 else:
     st.sidebar.success("匯率抓取成功")
 st.sidebar.write("最後更新（本地快取時間）:", st.session_state.rates_updated or time.strftime("%Y-%m-%d %H:%M:%S"))
-st.sidebar.write("可用幣別：", ", ".join(sorted(list(rates.keys()))[:20]))
+st.sidebar.write("可用幣別（前 20）:", ", ".join(sorted(list(rates.keys()))[:20]) if rates else "無")
 
 # 手動刷新匯率
 def refresh_rates():
@@ -155,17 +163,17 @@ def refresh_rates():
         except Exception:
             pass
     st.session_state.rates_updated = time.strftime("%Y-%m-%d %H:%M:%S")
-    st.experimental_rerun()
+    safe_rerun()
 
 if st.sidebar.button("重新抓取匯率"):
     refresh_rates()
 
-# 若沒抓到匯率，顯示錯誤並用 fallback
+# 若沒抓到匯率，顯示錯誤並使用 fallback
 if not rates:
     st.error("目前無法取得匯率資料，已使用內建 fallback。請按側邊欄「重新抓取匯率」或稍後再試。")
     rates = {"TWD":1.0, "USD":31.2, "JPY":0.22, "EUR":33.5, "CNY":4.5}
 
-# 畫面：運算式與結果
+# 主畫面：左側顯示運算式與結果，右側可放說明或 debug
 left, right = st.columns([2,1])
 with left:
     st.markdown("**運算式**")
@@ -201,7 +209,7 @@ for i, col in enumerate(cols):
                     st.error("匯率資料不足，無法換算")
             else:
                 st.session_state.selected = code
-            st.experimental_rerun()
+            safe_rerun()
 
 # 計算機按鍵功能
 def press(ch):
@@ -350,7 +358,7 @@ if st.button("套用選單"):
                 new_disp.append(c)
             if len(new_disp) >= 5: break
     st.session_state.displayed = new_disp[:5]
-    st.experimental_rerun()
+    safe_rerun()
 
 st.markdown("---")
 st.caption("提示：第一排按鍵點選貨幣可切換顯示；若已有計算結果，點選不同貨幣會立即換算。")
