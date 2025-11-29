@@ -6,8 +6,6 @@
     <title>即時匯率計算機</title>
     <!-- 載入 Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 載入 Lucide Icons CDN -->
-    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         /* 設置全局字體和背景 */
         body {
@@ -28,6 +26,7 @@
             font-size: 1.25rem; /* text-xl */
             font-weight: 700; /* font-bold */
             transition: transform 0.1s;
+            cursor: pointer;
         }
 
         .calc-button:active {
@@ -125,7 +124,7 @@
         let expression = ''; // 顯示的運算式
         let lastValue = 0;   // 當前顯示的數值
         let currentCurrency = 'TWD'; // 當前選擇的幣別
-        let exchangeRates = {}; // 存放 TWD 為基準的匯率
+        let exchangeRates = {}; // 存放 TWD 為基準的匯率 (格式: 1 目標幣別 = X TWD)
         let memoryValue = 0;    // 記憶數值 (以 TWD 為基準)
         
         // UI 元素
@@ -148,23 +147,25 @@
         // I. 資料獲取與初始化
         // ----------------------------------------------------
 
-        // 備用匯率 (TWD為基準, 以防API失敗)
-        const FALLBACK_RATES = {
+        // 備用匯率 (格式: 1 TWD = X 目標幣別)
+        // 注意：這裡的備用數據格式與 API 返回的格式一致，以便於計算
+        const FALLBACK_RATES_API_FORMAT = {
             "TWD": 1, "USD": 0.0307, "JPY": 4.80, "EUR": 0.0285, "CNY": 0.22,
             "HKD": 0.24, "GBP": 0.024, "AUD": 0.046, "SGD": 0.042, "KRW": 39.5,
         };
 
         /**
          * 從公開 API 獲取匯率 (使用 TWD 作為基礎幣別)
-         * 使用 Exchangerate-API 的 TWD 基礎數據
+         * 切換為 open.er-api.com
          */
         async function fetchRates() {
-            // 注意：這裡我們使用 TWD 作為基礎幣別 (base currency)
-            const API_URL = 'https://api.exchangerate-api.com/v4/latest/TWD';
-            updateStatus.textContent = '匯率資料: 連線中...';
+            // 使用 open.er-api.com 作為替代方案
+            const API_URL = 'https://open.er-api.com/v6/latest/TWD'; 
+            updateStatus.textContent = '匯率資料: 連線中... (使用 open.er-api)';
+
+            let ratesFromAPI = null;
 
             try {
-                // Exponential Backoff implementation for robustness
                 const MAX_RETRIES = 3;
                 let response = null;
                 for (let i = 0; i < MAX_RETRIES; i++) {
@@ -179,54 +180,38 @@
                 }
 
                 if (!response || !response.ok) {
-                    throw new Error(`API 請求失敗: ${response ? response.status : '未知錯誤'}`);
+                    throw new Error(`API 請求失敗，狀態碼: ${response ? response.status : '未知'}`);
                 }
 
                 const data = await response.json();
-                if (data.result !== 'success' || !data.rates) {
-                    throw new Error('API 回傳格式錯誤');
+                
+                // 檢查 API 返回的結構 (open.er-api 使用 result 和 rates)
+                if (data.result !== 'success' || !data.rates) { 
+                    throw new Error('API 回傳格式錯誤或服務失敗');
                 }
 
-                // API 回傳的 rates 是 (目標幣別 / TWD) 的值，例如 1 TWD = 0.03 USD
-                exchangeRates = data.rates;
+                ratesFromAPI = data.rates;
                 updateStatus.textContent = `匯率資料: 已更新 (${new Date().toLocaleTimeString('zh-TW')})`;
                 
             } catch (error) {
                 console.error("Fetch Rates Error:", error);
                 // 失敗：使用備用數據
-                exchangeRates = FALLBACK_RATES;
+                ratesFromAPI = FALLBACK_RATES_API_FORMAT;
                 updateStatus.textContent = `匯率資料: 網路獲取失敗，使用備用數據`;
             }
 
-            // 調整匯率格式：計算 1 目標幣別 相當於多少 TWD (這是我們計算機所需的)
-            // 由於 API 返回的是 1 TWD = X (目標幣別)，
-            // 則 1 目標幣別 = (1/X) TWD
+            // 調整匯率格式：將 (1 TWD = X 目標幣別) 轉換為 (1 目標幣別 = Y TWD)
+            // 轉換公式： Y = 1 / X
             
-            const inverseRates = { "TWD": 1.0 }; // TWD 永遠是 1
-            for (const [code, rate] of Object.entries(exchangeRates)) {
-                if (code !== 'TWD' && rate > 0) {
-                    // 得到 1 目標幣別 價值多少 TWD
-                    inverseRates[code] = 1 / rate; 
-                } else if (code === 'TWD') {
-                     inverseRates[code] = 1.0;
+            const convertedRates = { "TWD": 1.0 }; // TWD 永遠是 1
+            for (const [code, rate] of Object.entries(ratesFromAPI)) {
+                if (rate > 0) {
+                    convertedRates[code] = 1 / rate; 
+                } else {
+                    convertedRates[code] = 1.0; // 無效匯率設為 1
                 }
             }
-            exchangeRates = inverseRates;
-            
-            // 確保所有預設幣別都有匯率，沒有就使用備用
-            DEFAULT_CURRENCIES.forEach(code => {
-                if (!exchangeRates[code]) {
-                    // 備用數據 FALLBACK_RATES 也是 1 TWD = X (目標幣別) 的形式
-                    if (FALLBACK_RATES[code] && FALLBACK_RATES[code] > 0) {
-                         exchangeRates[code] = 1 / FALLBACK_RATES[code];
-                    } else {
-                         exchangeRates[code] = 1.0;
-                    }
-                }
-            });
-
-            // 確保 TWD 永遠是 1
-            exchangeRates.TWD = 1.0;
+            exchangeRates = convertedRates;
             
             renderCurrencySelectors();
             updateDisplay();
@@ -268,17 +253,13 @@
             displayExpr.textContent = expression || '';
             // 限制顯示的位數長度，避免溢出
             let displayedValue = lastValue;
-            if (String(displayedValue).length > 15) {
+            if (String(lastValue).length > 15 && !String(lastValue).includes('.')) {
+                // 如果是長整數，用科學記號或 toPrecision 處理
                 displayedValue = lastValue.toPrecision(10);
             }
+            
             displayValue.textContent = formatNumber(displayedValue);
             displayFlag.textContent = FLAGS[currentCurrency] || currentCurrency;
-            
-            // 更新記憶數值顯示（可選）
-            const memoryIndicator = document.querySelector('.memory-indicator');
-            if (memoryIndicator) {
-                memoryIndicator.textContent = `M: ${formatNumber(memoryValue)}`;
-            }
         }
 
         // ----------------------------------------------------
@@ -293,54 +274,48 @@
             } else if (input === '⌫') {
                 expression = expression.slice(0, -1);
             } else if (input === '()') {
-                 // 簡單括號邏輯：如果運算式為空或以運算符結尾，則加入 (，否則加入 )
+                 // 簡單括號邏輯
                 const lastChar = expression.slice(-1);
-                const operators = ['+', '-', '*', '/'];
-                const isOperator = operators.includes(lastChar);
+                const operators = ['+', '-', '*', '/', '('];
 
-                if (expression === '' || isOperator) {
+                if (expression === '' || operators.includes(lastChar)) {
                     expression += '(';
                 } else {
-                    // 檢查左括號是否多於右括號
                     const openCount = (expression.match(/\(/g) || []).length;
                     const closeCount = (expression.match(/\)/g) || []).length;
                     
                     if (openCount > closeCount) {
                         expression += ')';
                     } else {
-                        // 如果平衡了，則再按一次表示開始新運算
+                        // 如果平衡了，則加上乘號並開始新運算
                         expression += '*(';
                     }
                 }
 
             } else if (input === '+/-') {
+                // 嘗試將整個運算式取反
                 try {
-                    // 嘗試對運算式求值並取反
                     const val = evaluateExpression(expression);
                     if (val !== null && !isNaN(val)) {
                         expression = String(-val);
                         lastValue = -val;
-                    } else {
-                        // 如果無法求值，則只在尾部加上一個 '-'
-                        expression += '-';
                     }
-                } catch {
-                    expression += '-';
-                }
+                } catch {}
             } else {
                  // 處理運算符重複輸入
                 const lastChar = expression.slice(-1);
-                const operators = ['+', '-', '*', '/'];
+                const operators = ['+', '*', '/'];
                 const isOperator = operators.includes(lastChar);
                 const isNewOperator = operators.includes(input);
 
                 if (isOperator && isNewOperator && input !== '-') {
-                    // 替換重複的運算符（除了允許的負號）
+                    // 替換重複的運算符
                     expression = expression.slice(0, -1) + input;
                 } else {
                     expression += input;
                 }
             }
+            
             // 每次輸入後嘗試更新 lastValue（如果運算式有效）
             calculate(false);
             updateDisplay();
@@ -360,16 +335,14 @@
                      alert('錯誤: 除以零');
                 }
             } catch (e) {
-                // 如果運算錯誤，只清空運算式，保持當前數值
-                console.error("計算錯誤:", e);
-                // 為了避免用戶體驗差，只在控制台顯示錯誤
+                // 忽略運算中的暫時性錯誤
             }
         }
 
         /** 處理記憶體操作 */
         function handleMemory(action) {
-            calculate(false); // 先計算當前輸入
-            
+            calculate(true); // 執行計算並更新 expression
+
             // lastValue * (匯率)：將當前幣別的數值轉換為 TWD 價值
             const currentTWD = lastValue * (exchangeRates[currentCurrency] || 1); 
 
@@ -397,16 +370,16 @@
             if (newCurrency === currentCurrency) return;
             
             // 執行計算，確保 lastValue 是最新的結果
-            calculate(false); 
+            calculate(true); 
 
             const prevCurrency = currentCurrency;
             
+            // 1. lastValue * prevRate: 得到 TWD 價值
+            // 2. (TWD 價值) / newRate: 得到新幣別價值
             const prevRate = exchangeRates[prevCurrency] || 1;
             const newRate = exchangeRates[newCurrency] || 1;
 
             if (lastValue !== 0 && prevRate !== 0 && newRate !== 0) {
-                // lastValue * prevRate: 得到 TWD 價值
-                // (TWD 價值) / newRate: 得到新幣別價值
                 const valueInTWD = lastValue * prevRate;
                 const newValue = valueInTWD / newRate;
                 lastValue = newValue;
@@ -446,9 +419,8 @@
         // 顯示警告訊息，因為 Streamlit 的 alert 不會彈出
         function alert(message) {
              // 使用固定在右上角的 Toast 通知代替瀏覽器 alert
-             const appDiv = document.getElementById('app');
              const alertBox = document.createElement('div');
-             alertBox.className = "fixed top-4 right-4 bg-indigo-600 text-white p-3 rounded-lg shadow-xl z-50 transition-opacity duration-300";
+             alertBox.className = "fixed top-4 right-4 bg-indigo-600 text-white p-3 rounded-lg shadow-xl z-50 transition-opacity duration-300 opacity-100";
              alertBox.textContent = message;
              document.body.appendChild(alertBox); // 附加到 body 以確保在最上層
              
