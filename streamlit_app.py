@@ -21,7 +21,7 @@ FLAGS = {
     "TWD": "🇹🇼", "USD": "🇺🇸", "JPY": "🇯🇵", "EUR": "🇪🇺", "CNY": "🇨🇳",
     "HKD": "🇭🇰", "GBP": "🇬🇧", "AUD": "🇦🇺", "SGD": "🇸🇬", "KRW": "🇰🇷",
     "CAD": "🇨🇦", "CHF": "🇨🇭", "ZAR": "🇿🇦", "SEK": "🇸🇪", "NZD": "🇳🇿",
-    "THB": "🇹🇭", "PHP": "🇵🇭", "IDR": "🇮🇩", "VND": "🇻🇳", "MYR": "🇲🇾",
+    "THB": "🇹🇹", "PHP": "🇵🇭", "IDR": "🇮🇩", "VND": "🇻🇳", "MYR": "🇲🇾",
     "DKK": "🇩🇰", "IDR": "🇮🇩", "INR": "🇮🇳", "RUB": "🇷🇺", "SAR": "🇸🇦",
 }
 
@@ -36,6 +36,7 @@ def format_number(n):
     s2 = ("{:.8f}".format(s)).rstrip('0').rstrip('.')
     parts = s2.split('.')
     try:
+        # 整數部分加千分位
         parts[0] = "{:,}".format(int(parts[0])) if parts[0] != '' else '0'
     except Exception:
         parts[0] = parts[0]
@@ -72,7 +73,8 @@ def safe_eval(expr: str):
     except ZeroDivisionError:
         return float('inf')
     except Exception:
-        raise ValueError("計算錯誤")
+        # 捕獲所有其他錯誤，避免應用程式崩潰
+        return float('nan')
 
 def _to_float(x):
     if pd.isna(x):
@@ -151,7 +153,7 @@ def safe_rerun():
 # ---------- UI 與狀態管理 ----------
 st.set_page_config(page_title="即時匯率計算機", page_icon="💱", layout="wide")
 
-# CSS 優化：移除可能造成衝突的 padding，確保按鈕能填滿欄位
+# CSS 優化：強制 Grid 佈局，解決手機上的垂直堆疊問題
 st.markdown("""
 <style>
 /* 確保主內容區塊在手機上有足夠 padding */
@@ -161,18 +163,41 @@ section.main .block-container {
     padding-top: 1rem;
 }
 
+/* 貨幣選擇列：確保 5 欄顯示 */
+/* 針對 st.columns 結構進行優化 */
+div[data-testid="stHorizontalBlock"] > div:nth-child(1) > div:nth-child(1) {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px; /* 增加間距 */
+}
+
+/* 計算機按鍵容器：強制 4 欄顯示 (最重要的修正) */
+.calculator-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 強制 4 等分欄位 */
+    gap: 10px; /* 增加按鍵間距 */
+}
+
+/* 讓計算機按鍵的父元素（st-emotion-xyz，即 st.button 的容器）能夠填滿 grid cell */
+.calculator-grid > div {
+    /* 讓按鈕的 Streamlit 容器填滿網格空間 */
+    width: 100% !important; 
+    margin: 0 !important;
+}
+
 /* 計算機按鍵樣式 */
-div.stButton > button {
-    /* 調整字體大小與邊緣圓角 */
+.calculator-grid div.stButton > button {
     font-size: 16px;
     font-weight: bold;
     border-radius: 8px;
     /* 關鍵：避免固定 padding 擠壓窄螢幕排版 */
     padding-top: 10px;
     padding-bottom: 10px;
+    /* 確保按鈕填滿 grid cell */
+    width: 100% !important; 
 }
 
-/* 貨幣選擇按鈕 */
+/* 貨幣選擇按鈕樣式 */
 div[data-testid="column"] div.stButton > button {
     font-size: 14px;
     padding-top: 6px;
@@ -211,22 +236,25 @@ if not rates:
     st.sidebar.warning("⚠️ 目前使用備用匯率資料 (TWD=1, USD=32.5, JPY=0.21, EUR=35.0)")
     rates = {"TWD":1.0, "USD":32.5, "JPY":0.21, "EUR":35.0, "CNY":4.5, "HKD":4.1}
 else:
+    # 只在第一次成功抓取時更新時間
+    if not st.session_state.rates_updated:
+        st.session_state.rates_updated = time.strftime("%Y-%m-%d %H:%M:%S")
     st.sidebar.success("✅ 匯率更新成功")
 
 # 側邊欄資訊
 st.sidebar.title("設定與資訊")
-st.sidebar.info(f"資料來源: 台灣銀行 (BOT)\n更新時間: {st.session_state.rates_updated or time.strftime('%H:%M:%S')}")
+st.sidebar.info(f"資料來源: 台灣銀行 (BOT)\n更新時間: {st.session_state.rates_updated}")
 
 if st.sidebar.button("🔄 強制重新抓取匯率"):
     st.cache_data.clear()
-    st.session_state.rates_updated = time.strftime("%Y-%m-%d %H:%M:%S")
+    # 重新執行時，fetch_rates 會被再次呼叫
     safe_rerun()
 
 st.sidebar.markdown("---")
 st.sidebar.write(f"**目前記憶 (TWD)**: {format_number(st.session_state.memory)}")
 
 # 主標題
-st.title("💱 匯率計算機")
+st.title("💱 即時匯率計算機")
 
 # 2. 顯示結果區
 current_currency = st.session_state.selected
@@ -256,8 +284,9 @@ for i, col in enumerate(cols):
         
         prev_code = st.session_state.selected
         if st.session_state.last != 0 and prev_code in rates and code in rates:
-            val_in_twd = st.session_state.last * rates[prev_code]
-            val_target = val_in_twd / rates[code]
+            # 轉換邏輯： (當前幣別價值) / (目標幣別匯率)
+            val_in_twd = st.session_state.last * rates.get(prev_code, 1.0)
+            val_target = val_in_twd / rates.get(code, 1.0)
             st.session_state.last = val_target
             st.session_state.expr = str(val_target)
         
@@ -279,7 +308,7 @@ def toggle_sign():
     # 嘗試將整個運算式取負號
     try:
         val = safe_eval(st.session_state.expr)
-        if val == 0: return
+        if val == 0 or val == float('nan'): return
         st.session_state.expr = str(-val)
         st.session_state.last = -val
     except:
@@ -291,9 +320,17 @@ def do_calculate():
         st.session_state.last = 0.0
         return
     
+    # 移除所有非運算字元 (如國旗)
     s_clean = re.sub(r'[^0-9+\-*/().]', '', s)
     try:
         val = safe_eval(s_clean)
+        if val == float('inf'):
+            st.error("除以零錯誤")
+            return
+        if val == float('nan'):
+            st.error("運算格式錯誤")
+            return
+            
         st.session_state.last = float(val)
         st.session_state.expr = str(float(val))
     except ValueError as e:
@@ -304,85 +341,64 @@ def do_calculate():
 # 5. 計算機按鍵佈局
 st.markdown("---")
 
-# Row M (記憶鍵)
-c1, c2, c3, c4 = st.columns(4)
-with c1: 
-    if st.button("MC", use_container_width=True):
+# **關鍵修正：使用 st.container 並應用 .calculator-grid 樣式，強制 4 欄顯示**
+with st.container(border=False):
+    st.markdown('<div class="calculator-grid">', unsafe_allow_html=True)
+    
+    # 記憶鍵 (MC, MR, M+, M-)
+    if st.button("MC", key="btn_mc"):
         st.session_state.memory = 0.0
         st.toast("記憶已清除")
-with c2: 
-    if st.button("MR", use_container_width=True):
+    
+    if st.button("MR", key="btn_mr"):
         recalled = st.session_state.memory / rates.get(st.session_state.selected, 1.0)
         st.session_state.expr = str(recalled)
         st.session_state.last = recalled
-with c3: 
-    if st.button("M+", use_container_width=True):
+    
+    if st.button("M+", key="btn_m_plus"):
         do_calculate()
         val_twd = st.session_state.last * rates.get(st.session_state.selected, 1.0)
         st.session_state.memory += val_twd
         st.toast(f"已加入記憶 (TWD: {format_number(val_twd)})")
-with c4: 
-    if st.button("M-", use_container_width=True):
+    
+    if st.button("M-", key="btn_m_minus"):
         do_calculate()
         val_twd = st.session_state.last * rates.get(st.session_state.selected, 1.0)
         st.session_state.memory -= val_twd
         st.toast(f"已從記憶扣除")
 
-# Row 1 (功能鍵)
-r1_1, r1_2, r1_3, r1_4 = st.columns(4)
-with r1_1:
-    if st.button("C", type="primary", use_container_width=True): clear_all()
-with r1_2:
-    if st.button("⌫", use_container_width=True): backspace()
-with r1_3: 
-    if st.button("( )", use_container_width=True): press("(")
-with r1_4:
-    if st.button("÷", use_container_width=True): press("/")
+    # Row 1 (功能鍵)
+    if st.button("C", type="primary", key="btn_c"): clear_all()
+    if st.button("⌫", key="btn_backspace"): backspace()
+    if st.button("( )", key="btn_paren"): press("(")
+    if st.button("÷", key="btn_div"): press("/")
 
-# Row 2 (7, 8, 9, x)
-r2_1, r2_2, r2_3, r2_4 = st.columns(4)
-with r2_1: 
-    if st.button("7", use_container_width=True): press("7")
-with r2_2: 
-    if st.button("8", use_container_width=True): press("8")
-with r2_3: 
-    if st.button("9", use_container_width=True): press("9")
-with r2_4: 
-    if st.button("×", use_container_width=True): press("*")
+    # Row 2 (7, 8, 9, x)
+    if st.button("7", key="btn_7"): press("7")
+    if st.button("8", key="btn_8"): press("8")
+    if st.button("9", key="btn_9"): press("9")
+    if st.button("×", key="btn_mul"): press("*")
 
-# Row 3 (4, 5, 6, -)
-r3_1, r3_2, r3_3, r3_4 = st.columns(4)
-with r3_1: 
-    if st.button("4", use_container_width=True): press("4")
-with r3_2: 
-    if st.button("5", use_container_width=True): press("5")
-with r3_3: 
-    if st.button("6", use_container_width=True): press("6")
-with r3_4: 
-    if st.button("－", use_container_width=True): press("-")
+    # Row 3 (4, 5, 6, -)
+    if st.button("4", key="btn_4"): press("4")
+    if st.button("5", key="btn_5"): press("5")
+    if st.button("6", key="btn_6"): press("6")
+    if st.button("－", key="btn_sub"): press("-")
 
-# Row 4 (1, 2, 3, +)
-r4_1, r4_2, r4_3, r4_4 = st.columns(4)
-with r4_1: 
-    if st.button("1", use_container_width=True): press("1")
-with r4_2: 
-    if st.button("2", use_container_width=True): press("2")
-with r4_3: 
-    if st.button("3", use_container_width=True): press("3")
-with r4_4: 
-    if st.button("＋", use_container_width=True): press("+")
+    # Row 4 (1, 2, 3, +)
+    if st.button("1", key="btn_1"): press("1")
+    if st.button("2", key="btn_2"): press("2")
+    if st.button("3", key="btn_3"): press("3")
+    if st.button("＋", key="btn_add"): press("+")
 
-# Row 5 (0, ., ±, =)
-r5_1, r5_2, r5_3, r5_4 = st.columns(4)
-with r5_1: 
-    if st.button("0", use_container_width=True): press("0")
-with r5_2: 
-    if st.button(".", use_container_width=True): press(".")
-with r5_3: 
-    if st.button("±", use_container_width=True): toggle_sign()
-with r5_4: 
-    if st.button("＝", type="primary", use_container_width=True): do_calculate()
+    # Row 5 (0, ., ±, =)
+    if st.button("0", key="btn_0"): press("0")
+    if st.button(".", key="btn_dot"): press(".")
+    if st.button("±", key="btn_sign"): toggle_sign()
+    if st.button("＝", type="primary", key="btn_eq"): do_calculate()
 
+    st.markdown('</div>', unsafe_allow_html=True)
+    
 st.markdown("---")
 
 # 6. 自訂貨幣列設定
