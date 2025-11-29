@@ -1,441 +1,465 @@
-import streamlit as st
-import requests
-import pandas as pd
-import io
-import time
-import ast
-import operator as op
-import re
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>即時匯率計算機</title>
+    <!-- 載入 Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 載入 Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* 設置全局字體和背景 */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
 
-# ---------- 設定 ----------
-BOT_CSV_URL = "https://rate.bot.com.tw/xrt/flcsv/0/day"
-CACHE_TTL = 600  # 10 分鐘快取
+        /* 核心：強制計算機按鈕 4 欄佈局 */
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px; /* 按鈕間距 */
+        }
 
-# 偽裝成瀏覽器的 Header，避免被 BOT 阻擋連線（尤其 Streamlit Cloud 主機在國外）
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-}
+        /* 讓按鈕在小螢幕上保持足夠的點擊區域 */
+        .calc-button {
+            padding: 1rem 0.5rem;
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 700; /* font-bold */
+            transition: transform 0.1s;
+        }
 
-FLAGS = {
-    "TWD": "🇹🇼", "USD": "🇺🇸", "JPY": "🇯🇵", "EUR": "🇪🇺", "CNY": "🇨🇳",
-    "HKD": "🇭🇰", "GBP": "🇬🇧", "AUD": "🇦🇺", "SGD": "🇸🇬", "KRW": "🇰🇷",
-    "CAD": "🇨🇦", "CHF": "🇨🇭", "ZAR": "🇿🇦", "SEK": "🇸🇪", "NZD": "🇳🇿",
-    "THB": "🇹🇭", "PHP": "🇵🇭", "IDR": "🇮🇩", "VND": "🇻🇳", "MYR": "🇲🇾",
-    "DKK": "🇩🇰", "IDR": "🇮🇩", "INR": "🇮🇳", "RUB": "🇷🇺", "SAR": "🇸🇦",
-}
-
-# ---------- 工具函式 ----------
-def format_number(n):
-    """格式化數字：去除多餘的零，加上千分位"""
-    try:
-        s = float(n)
-    except Exception:
-        return "0"
-    
-    s2 = ("{:.8f}".format(s)).rstrip('0').rstrip('.')
-    parts = s2.split('.')
-    try:
-        # 整數部分加千分位
-        parts[0] = "{:,}".format(int(parts[0])) if parts[0] != '' else '0'
-    except Exception:
-        parts[0] = parts[0]
-    
-    return parts[0] + ('.' + parts[1] if len(parts) > 1 else '')
-
-# 安全運算算子白名單
-ALLOWED_OPERATORS = {
-    ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul, ast.Div: op.truediv,
-    ast.USub: op.neg, ast.UAdd: op.pos
-}
-
-def safe_eval(expr: str):
-    """使用 ast.parse 進行安全的數學運算評估"""
-    def _eval(node):
-        if isinstance(node, (ast.Constant, ast.Num)):
-            if isinstance(node.value, (int, float)):
-                return node.value
-            if isinstance(node, ast.Num):
-                 return node.n
-            raise ValueError("不支援的常數類型")
-        if isinstance(node, ast.UnaryOp) and type(node.op) in ALLOWED_OPERATORS:
-            return ALLOWED_OPERATORS[type(node.op)](_eval(node.operand))
-        if isinstance(node, ast.BinOp) and type(node.op) in ALLOWED_OPERATORS:
-            return ALLOWED_OPERATORS[type(node.op)](_eval(node.left), _eval(node.right))
-        if isinstance(node, ast.Expression):
-            return _eval(node.body)
-        raise ValueError("不支援的運算")
-
-    try:
-        if not expr: return 0
-        node = ast.parse(expr, mode='eval')
-        return _eval(node)
-    except ZeroDivisionError:
-        return float('inf')
-    except Exception:
-        # 捕獲所有其他錯誤，避免應用程式崩潰
-        return float('nan')
-
-def _to_float(x):
-    if pd.isna(x):
-        return None
-    try:
-        return float(str(x).replace(',', ''))
-    except Exception:
-        return None
-
-# ---------- 取得並解析 BOT CSV（快取） ----------
-@st.cache_data(ttl=CACHE_TTL)
-def fetch_rates():
-    """回傳 (rates_dict, error_message)"""
-    try:
-        r = requests.get(BOT_CSV_URL, headers=HEADERS, timeout=15)
-        r.encoding = 'utf-8-sig'
+        .calc-button:active {
+            transform: scale(0.98);
+        }
         
-        if r.status_code != 200:
-            return {}, f"伺服器回應錯誤: {r.status_code}"
+        /* 讓貨幣選擇按鈕 5 欄佈局 */
+        .currency-selector-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
 
-        txt = r.text
-        df = pd.read_csv(io.StringIO(txt))
+        /* 處理結果顯示區的字體 */
+        #display-expression {
+            font-size: 0.9rem; /* sm:text-lg */
+            color: #6b7280; /* text-gray-500 */
+        }
+        #display-value {
+            font-size: 2.5rem; /* sm:text-5xl */
+            font-weight: 800; /* font-extrabold */
+        }
+        #display-currency-flag {
+            font-size: 1.125rem; /* text-lg */
+            color: #4b5563; /* text-gray-600 */
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex items-center justify-center">
+
+    <div id="app" class="w-full max-w-sm bg-white shadow-2xl rounded-xl p-5 md:p-6">
         
-    except requests.exceptions.RequestException as e:
-        return {}, f"網路請求失敗，請檢查連線或 BOT 網站。錯誤: {e}"
-    except Exception as e:
-        return {}, f"解析 CSV 失敗，可能格式已變動。錯誤: {e}"
-    
-    rates = {}
-    try:
-        for _, row in df.iterrows():
-            cur_field = row.get('幣別') or row.get('Currency') or ''
-            code = None
-            if isinstance(cur_field, str):
-                m = re.search(r'\((\w+)\)', cur_field) 
-                if m:
-                    code = m.group(1)
-            
-            if not code:
-                code = (row.get('Currency Code') or '').strip()
-            
-            if not code:
-                continue
+        <!-- 標題與更新時間 -->
+        <header class="mb-4 text-center">
+            <h1 class="text-2xl font-bold text-gray-800">💱 即時匯率計算機</h1>
+            <p id="update-status" class="text-xs text-gray-500 mt-1">匯率資料: 載入中...</p>
+        </header>
 
-            # 使用「即期賣出」作為參考匯率，若無則使用「即期買入」
-            buy = _to_float(row.get('即期買入') or row.get('Spot Buy') or None)
-            sell = _to_float(row.get('即期賣出') or row.get('Spot Sell') or None)
-            
-            val = None
-            if sell is not None and sell > 0:
-                val = sell
-            elif buy is not None and buy > 0:
-                val = buy
-            
-            if val is not None:
-                rates[code] = val
+        <!-- 顯示區域 -->
+        <div class="bg-gray-100 p-4 rounded-lg mb-6 shadow-inner">
+            <div id="display-expression" class="text-right h-6 overflow-hidden whitespace-nowrap mb-1"></div>
+            <div class="flex justify-between items-end">
+                <div id="display-currency-flag" class="mr-2"></div>
+                <div id="display-value" class="text-gray-900 text-right overflow-hidden whitespace-nowrap font-mono">0</div>
+            </div>
+        </div>
+
+        <!-- 貨幣選擇器 -->
+        <div id="currency-selectors" class="currency-selector-grid mb-6">
+            <!-- 按鈕將由 JS 動態生成 -->
+        </div>
+
+        <!-- 計算機按鍵區域 -->
+        <div class="calculator-grid">
+            <!-- 記憶鍵 -->
+            <button onclick="handleMemory('clear')" class="calc-button bg-gray-200 text-gray-700 rounded-lg shadow-md hover:bg-gray-300">MC</button>
+            <button onclick="handleMemory('recall')" class="calc-button bg-gray-200 text-gray-700 rounded-lg shadow-md hover:bg-gray-300">MR</button>
+            <button onclick="handleMemory('add')" class="calc-button bg-gray-200 text-gray-700 rounded-lg shadow-md hover:bg-gray-300">M+</button>
+            <button onclick="handleMemory('subtract')" class="calc-button bg-gray-200 text-gray-700 rounded-lg shadow-md hover:bg-gray-300">M-</button>
+
+            <!-- 第一排：功能鍵 -->
+            <button onclick="handleInput('C')" class="calc-button bg-red-500 text-white rounded-lg shadow-md hover:bg-red-600">C</button>
+            <button onclick="handleInput('⌫')" class="calc-button bg-gray-300 text-gray-800 rounded-lg shadow-md hover:bg-gray-400">⌫</button>
+            <button onclick="handleInput('()')" class="calc-button bg-gray-300 text-gray-800 rounded-lg shadow-md hover:bg-gray-400">(</button>
+            <button onclick="handleInput('/')" class="calc-button bg-yellow-500 text-white rounded-lg shadow-md hover:bg-yellow-600">÷</button>
+
+            <!-- 第二排：7, 8, 9, * -->
+            <button onclick="handleInput('7')" class="calc-button bg-gray-50 text-gray-900 rounded-lg shadow-md hover:bg-gray-200">7</button>
+            <button onclick="handleInput('8')" class="calc-button bg-gray-50 text-gray-900 rounded-lg shadow-md hover:bg-gray-200">8</button>
+            <button onclick="handleInput('9')" class="calc-button bg-gray-50 text-gray-900 rounded-lg shadow-md hover:bg-gray-200">9</button>
+            <button onclick="handleInput('*')" class="calc-button bg-yellow-500 text-white rounded-lg shadow-md hover:bg-yellow-600">×</button>
+
+            <!-- 第三排：4, 5, 6, - -->
+            <button onclick="handleInput('4')" class="calc-button bg-gray-50 text-gray-900 rounded-lg shadow-md hover:bg-gray-200">4</button>
+            <button onclick="handleInput('5')" class="calc-button bg-gray-50 text-gray-900 rounded-lg shadow-md hover:bg-gray-200">5</button>
+            <button onclick="handleInput('6')" class="calc-button bg-gray-50 text-gray-900 rounded-lg shadow-md hover:bg-gray-200">6</button>
+            <button onclick="handleInput('-')" class="calc-button bg-yellow-500 text-white rounded-lg shadow-md hover:bg-yellow-600">－</button>
+
+            <!-- 第四排：1, 2, 3, + -->
+            <button onclick="handleInput('1')" class="calc-button bg-gray-50 text-gray-900 rounded-lg shadow-md hover:bg-gray-200">1</button>
+            <button onclick="handleInput('2')" class="calc-button bg-gray-50 text-gray-900 rounded-lg shadow-md hover:bg-gray-200">2</button>
+            <button onclick="handleInput('3')" class="calc-button bg-gray-50 text-gray-900 rounded-lg shadow-md hover:bg-gray-200">3</button>
+            <button onclick="handleInput('+')" class="calc-button bg-yellow-500 text-white rounded-lg shadow-md hover:bg-yellow-600">＋</button>
+
+            <!-- 第五排：0, ., ±, = -->
+            <button onclick="handleInput('0')" class="calc-button bg-gray-50 text-gray-900 rounded-lg shadow-md hover:bg-gray-200">0</button>
+            <button onclick="handleInput('.') " class="calc-button bg-gray-50 text-gray-900 rounded-lg shadow-md hover:bg-gray-200">.</button>
+            <button onclick="handleInput('+/-')" class="calc-button bg-gray-300 text-gray-800 rounded-lg shadow-md hover:bg-gray-400">±</button>
+            <button onclick="calculate()" class="calc-button bg-green-500 text-white rounded-lg shadow-md hover:bg-green-600">=</button>
+        </div>
+    </div>
+
+    <script>
+        // 全局狀態
+        let expression = ''; // 顯示的運算式
+        let lastValue = 0;   // 當前顯示的數值
+        let currentCurrency = 'TWD'; // 當前選擇的幣別
+        let exchangeRates = {}; // 存放 TWD 為基準的匯率
+        let memoryValue = 0;    // 記憶數值 (以 TWD 為基準)
+        
+        // UI 元素
+        const displayExpr = document.getElementById('display-expression');
+        const displayValue = document.getElementById('display-value');
+        const displayFlag = document.getElementById('display-currency-flag');
+        const updateStatus = document.getElementById('update-status');
+        const currencySelectors = document.getElementById('currency-selectors');
+
+        const FLAGS = {
+            "TWD": "🇹🇼 TWD", "USD": "🇺🇸 USD", "JPY": "🇯🇵 JPY", "EUR": "🇪🇺 EUR", "CNY": "🇨🇳 CNY",
+            "HKD": "🇭🇰 HKD", "GBP": "🇬🇧 GBP", "AUD": "🇦🇺 AUD", "SGD": "🇸🇬 SGD", "KRW": "🇰🇷 KRW",
+            "CAD": "🇨🇦 CAD", "CHF": "🇨🇭 CHF", "ZAR": "🇿🇦 ZAR", "SEK": "🇸🇪 SEK", "NZD": "🇳🇿 NZD",
+            "THB": "🇹🇭 THB", "PHP": "🇵🇭 PHP", "IDR": "🇮🇩 IDR", "MYR": "🇲🇾 MYR"
+        };
+        
+        const DEFAULT_CURRENCIES = ['TWD', 'USD', 'JPY', 'EUR', 'CNY'];
+        
+        // ----------------------------------------------------
+        // I. 資料獲取與初始化
+        // ----------------------------------------------------
+
+        // 備用匯率 (TWD為基準, 以防API失敗)
+        const FALLBACK_RATES = {
+            "TWD": 1, "USD": 0.0307, "JPY": 4.80, "EUR": 0.0285, "CNY": 0.22,
+            "HKD": 0.24, "GBP": 0.024, "AUD": 0.046, "SGD": 0.042, "KRW": 39.5,
+        };
+
+        /**
+         * 從公開 API 獲取匯率 (使用 TWD 作為基礎幣別)
+         * 使用 Exchangerate-API 的 TWD 基礎數據
+         */
+        async function fetchRates() {
+            // 注意：這裡我們使用 TWD 作為基礎幣別 (base currency)
+            const API_URL = 'https://api.exchangerate-api.com/v4/latest/TWD';
+            updateStatus.textContent = '匯率資料: 連線中...';
+
+            try {
+                // Exponential Backoff implementation for robustness
+                const MAX_RETRIES = 3;
+                let response = null;
+                for (let i = 0; i < MAX_RETRIES; i++) {
+                    const res = await fetch(API_URL);
+                    if (res.ok) {
+                        response = res;
+                        break;
+                    }
+                    if (i < MAX_RETRIES - 1) {
+                        await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+                    }
+                }
+
+                if (!response || !response.ok) {
+                    throw new Error(`API 請求失敗: ${response ? response.status : '未知錯誤'}`);
+                }
+
+                const data = await response.json();
+                if (data.result !== 'success' || !data.rates) {
+                    throw new Error('API 回傳格式錯誤');
+                }
+
+                // API 回傳的 rates 是 (目標幣別 / TWD) 的值，例如 1 TWD = 0.03 USD
+                exchangeRates = data.rates;
+                updateStatus.textContent = `匯率資料: 已更新 (${new Date().toLocaleTimeString('zh-TW')})`;
                 
-    except Exception as e:
-        return {}, f"內部解析錯誤: {e}"
-    
-    rates['TWD'] = 1.0
-    return rates, None
+            } catch (error) {
+                console.error("Fetch Rates Error:", error);
+                // 失敗：使用備用數據
+                exchangeRates = FALLBACK_RATES;
+                updateStatus.textContent = `匯率資料: 網路獲取失敗，使用備用數據`;
+            }
 
-# ---------- safe rerun（相容性處理） ----------
-def safe_rerun():
-    """嘗試執行 Streamlit rerun，相容不同版本"""
-    try:
-        st.rerun()
-    except AttributeError:
-        try:
-            st.experimental_rerun()
-        except AttributeError:
-            pass
-
-# ---------- UI 與狀態管理 ----------
-st.set_page_config(page_title="即時匯率計算機", page_icon="💱", layout="wide")
-
-# CSS 優化：強制 Grid 佈局，解決手機上的垂直堆疊問題
-st.markdown("""
-<style>
-/* 確保主內容區塊在手機上有足夠 padding */
-section.main .block-container {
-    padding-left: 1rem;
-    padding-right: 1rem;
-    padding-top: 1rem;
-}
-
-/* 貨幣選擇列：確保 5 欄顯示 */
-/* 鎖定 st.columns 結構的容器，強制 Grid 佈局 */
-div[data-testid="stHorizontalBlock"] > div:nth-child(1) {
-    display: grid !important;
-    grid-template-columns: repeat(5, 1fr) !important;
-    gap: 10px; 
-}
-
-
-/* 計算機按鍵容器：強制 4 欄顯示 (最重要且最激進的修正) */
-/* 鎖定 st.container 的內部元素，並將其轉為 Grid */
-.calculator-grid {
-    display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important; /* 強制 4 等分欄位 */
-    gap: 10px; /* 增加按鍵間距 */
-}
-
-/* 讓 Streamlit 產生的按鈕容器（div）填滿 Grid Cell */
-.calculator-grid > div {
-    width: 100% !important; 
-    margin: 0 !important;
-}
-
-/* 計算機按鍵樣式 */
-.calculator-grid div.stButton > button {
-    font-size: 16px;
-    font-weight: bold;
-    border-radius: 8px;
-    padding-top: 10px;
-    padding-bottom: 10px;
-    width: 100% !important; 
-}
-
-/* 貨幣選擇按鈕樣式 */
-div[data-testid="column"] div.stButton > button {
-    font-size: 14px;
-    padding-top: 6px;
-    padding-bottom: 6px;
-}
-
-/* 結果顯示區塊 */
-.result-box {
-    background-color: #f0f2f6; /* 淺灰色背景 */
-    padding: 15px;
-    border-radius: 10px;
-    text-align: right;
-    margin-bottom: 15px;
-}
-.result-expr { font-size: 1.1rem; color: #666; font-family: monospace; min-height: 1.4rem; }
-.result-val { font-size: 2.2rem; font-weight: bold; color: #333; }
-.result-cur { font-size: 1rem; color: #888; }
-</style>
-""", unsafe_allow_html=True)
-
-# 初始化 Session State
-if 'expr' not in st.session_state: st.session_state.expr = ''
-if 'last' not in st.session_state: st.session_state.last = 0.0
-if 'memory' not in st.session_state: st.session_state.memory = 0.0 # 始終以 TWD 儲存
-if 'displayed' not in st.session_state:
-    st.session_state.displayed = ['TWD', 'USD', 'JPY', 'EUR', 'CNY']
-if 'selected' not in st.session_state: st.session_state.selected = 'TWD'
-if 'rates_updated' not in st.session_state: st.session_state.rates_updated = ''
-
-# 1. 取得匯率
-rates, fetch_err = fetch_rates()
-
-# Fallback data
-if not rates:
-    st.sidebar.error("❌ 網路匯率獲取失敗")
-    st.sidebar.warning(
-        "⚠️ 台灣銀行伺服器可能阻擋了 Streamlit Cloud (國外IP) 的連線。目前使用**備用匯率資料**。"
-    )
-    # 使用稍微更貼近現實的固定備用匯率
-    rates = {
-        "TWD": 1.0, "USD": 32.50, "JPY": 0.208, "EUR": 34.50, 
-        "CNY": 4.48, "HKD": 4.12, "KRW": 0.024
-    }
-    st.session_state.rates_updated = "備用數據"
-else:
-    # 只在第一次成功抓取時更新時間
-    if st.session_state.rates_updated == "備用數據" or not st.session_state.rates_updated:
-        st.session_state.rates_updated = time.strftime("%Y-%m-%d %H:%M:%S")
-    st.sidebar.success("✅ 匯率更新成功 (資料來自台灣銀行)")
-
-# 側邊欄資訊
-st.sidebar.title("設定與資訊")
-st.sidebar.info(f"資料來源: 台灣銀行 (BOT)\n更新時間: {st.session_state.rates_updated}")
-
-if st.session_state.rates_updated == "備用數據":
-     st.sidebar.info("請點擊下方按鈕，嘗試重新連線至台灣銀行。")
-
-if st.sidebar.button("🔄 強制重新抓取匯率"):
-    st.cache_data.clear()
-    safe_rerun()
-
-st.sidebar.markdown("---")
-st.sidebar.write(f"**目前記憶 (TWD)**: {format_number(st.session_state.memory)}")
-
-# 主標題
-st.title("💱 即時匯率計算機")
-
-# 2. 顯示結果區
-current_currency = st.session_state.selected
-current_flag = FLAGS.get(current_currency, '')
-
-st.markdown(f"""
-<div class="result-box">
-    <div class="result-expr">{st.session_state.expr if st.session_state.expr else '&nbsp;'}</div>
-    <div class="result-val">{format_number(st.session_state.last)}</div>
-    <div class="result-cur">{current_flag} {current_currency}</div>
-</div>
-""", unsafe_allow_html=True)
-
-# 3. 貨幣切換列 (Top 5)
-cols = st.columns(5)
-for i, col in enumerate(cols):
-    code = st.session_state.displayed[i] if i < len(st.session_state.displayed) else 'TWD'
-    flag = FLAGS.get(code, '')
-    btn_label = f"{flag} {code}"
-    is_active = (code == st.session_state.selected)
-    
-    # 關鍵修正：點擊按鈕後立即處理換算邏輯
-    if col.button(btn_label, 
-                  key=f"cur_btn_{i}", 
-                  type="primary" if is_active else "secondary", 
-                  use_container_width=True):
-        
-        prev_code = st.session_state.selected
-        if st.session_state.last != 0 and prev_code in rates and code in rates:
-            # 轉換邏輯： (當前幣別價值) / (目標幣別匯率)
-            val_in_twd = st.session_state.last * rates.get(prev_code, 1.0)
-            val_target = val_in_twd / rates.get(code, 1.0)
-            st.session_state.last = val_target
-            st.session_state.expr = str(val_target)
-        
-        st.session_state.selected = code
-        safe_rerun()
-
-# 4. 計算機邏輯函式
-def press(ch):
-    st.session_state.expr += str(ch)
-
-def backspace():
-    st.session_state.expr = st.session_state.expr[:-1]
-
-def clear_all():
-    st.session_state.expr = ''
-    st.session_state.last = 0.0
-
-def toggle_sign():
-    # 嘗試將整個運算式取負號
-    try:
-        val = safe_eval(st.session_state.expr)
-        if val == 0 or val == float('nan'): return
-        st.session_state.expr = str(-val)
-        st.session_state.last = -val
-    except:
-        st.session_state.expr += '-'
-
-def do_calculate():
-    s = st.session_state.expr.strip()
-    if not s: 
-        st.session_state.last = 0.0
-        return
-    
-    # 移除所有非運算字元 (如國旗)
-    s_clean = re.sub(r'[^0-9+\-*/().]', '', s)
-    try:
-        val = safe_eval(s_clean)
-        if val == float('inf'):
-            st.error("除以零錯誤")
-            return
-        if val == float('nan'):
-            st.error("運算格式錯誤")
-            return
+            // 調整匯率格式：計算 1 目標幣別 相當於多少 TWD (這是我們計算機所需的)
+            // 由於 API 返回的是 1 TWD = X (目標幣別)，
+            // 則 1 目標幣別 = (1/X) TWD
             
-        st.session_state.last = float(val)
-        st.session_state.expr = str(float(val))
-    except ValueError as e:
-        st.error(f"運算格式錯誤: {e}")
-    except Exception:
-        st.error("發生未預期運算錯誤")
-
-# 5. 計算機按鍵佈局
-st.markdown("---")
-
-# **使用 st.container 並應用 .calculator-grid 樣式，強制 4 欄顯示**
-with st.container(border=False):
-    st.markdown('<div class="calculator-grid">', unsafe_allow_html=True)
-    
-    # 記憶鍵 (MC, MR, M+, M-)
-    if st.button("MC", key="btn_mc"):
-        st.session_state.memory = 0.0
-        st.toast("記憶已清除")
-    
-    if st.button("MR", key="btn_mr"):
-        recalled = st.session_state.memory / rates.get(st.session_state.selected, 1.0)
-        st.session_state.expr = str(recalled)
-        st.session_state.last = recalled
-    
-    if st.button("M+", key="btn_m_plus"):
-        do_calculate()
-        val_twd = st.session_state.last * rates.get(st.session_state.selected, 1.0)
-        st.session_state.memory += val_twd
-        st.toast(f"已加入記憶 (TWD: {format_number(val_twd)})")
-    
-    if st.button("M-", key="btn_m_minus"):
-        do_calculate()
-        val_twd = st.session_state.last * rates.get(st.session_state.selected, 1.0)
-        st.session_state.memory -= val_twd
-        st.toast(f"已從記憶扣除")
-
-    # Row 1 (功能鍵)
-    if st.button("C", type="primary", key="btn_c"): clear_all()
-    if st.button("⌫", key="btn_backspace"): backspace()
-    if st.button("( )", key="btn_paren"): press("(")
-    if st.button("÷", key="btn_div"): press("/")
-
-    # Row 2 (7, 8, 9, x)
-    if st.button("7", key="btn_7"): press("7")
-    if st.button("8", key="btn_8"): press("8")
-    if st.button("9", key="btn_9"): press("9")
-    if st.button("×", key="btn_mul"): press("*")
-
-    # Row 3 (4, 5, 6, -)
-    if st.button("4", key="btn_4"): press("4")
-    if st.button("5", key="btn_5"): press("5")
-    if st.button("6", key="btn_6"): press("6")
-    if st.button("－", key="btn_sub"): press("-")
-
-    # Row 4 (1, 2, 3, +)
-    if st.button("1", key="btn_1"): press("1")
-    if st.button("2", key="btn_2"): press("2")
-    if st.button("3", key="btn_3"): press("3")
-    if st.button("＋", key="btn_add"): press("+")
-
-    # Row 5 (0, ., ±, =)
-    if st.button("0", key="btn_0"): press("0")
-    if st.button(".", key="btn_dot"): press(".")
-    if st.button("±", key="btn_sign"): toggle_sign()
-    if st.button("＝", type="primary", key="btn_eq"): do_calculate()
-
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-st.markdown("---")
-
-# 6. 自訂貨幣列設定
-with st.expander("⚙️ 自訂上方快捷貨幣列"):
-    all_codes = sorted(list(rates.keys()))
-    valid_defaults = [c for c in st.session_state.displayed if c in all_codes]
-    
-    new_selection = st.multiselect(
-        "選擇最多 5 個常用貨幣", 
-        options=all_codes, 
-        default=valid_defaults,
-        max_selections=5,
-        key="currency_multiselect"
-    )
-    
-    if st.button("更新快捷列", key="update_display"):
-        final_list = []
-        if 'TWD' in new_selection:
-            final_list.append('TWD')
+            const inverseRates = { "TWD": 1.0 }; // TWD 永遠是 1
+            for (const [code, rate] of Object.entries(exchangeRates)) {
+                if (code !== 'TWD' && rate > 0) {
+                    // 得到 1 目標幣別 價值多少 TWD
+                    inverseRates[code] = 1 / rate; 
+                } else if (code === 'TWD') {
+                     inverseRates[code] = 1.0;
+                }
+            }
+            exchangeRates = inverseRates;
             
-        for c in new_selection:
-            if c != 'TWD' and len(final_list) < 5:
-                 final_list.append(c)
+            // 確保所有預設幣別都有匯率，沒有就使用備用
+            DEFAULT_CURRENCIES.forEach(code => {
+                if (!exchangeRates[code]) {
+                    // 備用數據 FALLBACK_RATES 也是 1 TWD = X (目標幣別) 的形式
+                    if (FALLBACK_RATES[code] && FALLBACK_RATES[code] > 0) {
+                         exchangeRates[code] = 1 / FALLBACK_RATES[code];
+                    } else {
+                         exchangeRates[code] = 1.0;
+                    }
+                }
+            });
+
+            // 確保 TWD 永遠是 1
+            exchangeRates.TWD = 1.0;
+            
+            renderCurrencySelectors();
+            updateDisplay();
+        }
+
+        // ----------------------------------------------------
+        // II. 渲染與顯示
+        // ----------------------------------------------------
+
+        /** 格式化數字：加上千分位，並去除尾部不必要的零 */
+        function formatNumber(num) {
+            if (isNaN(num) || num === null) return '0';
+            let s = num.toFixed(8).replace(/\.?0+$/, '');
+            let parts = s.split('.');
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            return parts.join('.');
+        }
+
+        /** 渲染頂部貨幣選擇按鈕 */
+        function renderCurrencySelectors() {
+            currencySelectors.innerHTML = '';
+            DEFAULT_CURRENCIES.forEach(code => {
+                const isActive = code === currentCurrency;
+                const button = document.createElement('button');
+                
+                button.textContent = code;
+                button.setAttribute('data-currency', code);
+                button.className = `p-2 rounded-lg font-semibold text-sm shadow-md transition duration-150 ${
+                    isActive ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700'
+                }`;
+                button.onclick = () => changeCurrency(code);
+                
+                currencySelectors.appendChild(button);
+            });
+        }
         
-        if len(final_list) < 5:
-            for c in ['USD', 'JPY', 'EUR', 'CNY', 'HKD']:
-                if c not in final_list and c in all_codes:
-                    final_list.append(c)
-                if len(final_list) >= 5: break
+        /** 更新顯示面板 */
+        function updateDisplay() {
+            displayExpr.textContent = expression || '';
+            // 限制顯示的位數長度，避免溢出
+            let displayedValue = lastValue;
+            if (String(displayedValue).length > 15) {
+                displayedValue = lastValue.toPrecision(10);
+            }
+            displayValue.textContent = formatNumber(displayedValue);
+            displayFlag.textContent = FLAGS[currentCurrency] || currentCurrency;
+            
+            // 更新記憶數值顯示（可選）
+            const memoryIndicator = document.querySelector('.memory-indicator');
+            if (memoryIndicator) {
+                memoryIndicator.textContent = `M: ${formatNumber(memoryValue)}`;
+            }
+        }
+
+        // ----------------------------------------------------
+        // III. 邏輯處理
+        // ----------------------------------------------------
+
+        /** 處理計算機輸入 (數字, 運算符, 功能) */
+        function handleInput(input) {
+            if (input === 'C') {
+                expression = '';
+                lastValue = 0;
+            } else if (input === '⌫') {
+                expression = expression.slice(0, -1);
+            } else if (input === '()') {
+                 // 簡單括號邏輯：如果運算式為空或以運算符結尾，則加入 (，否則加入 )
+                const lastChar = expression.slice(-1);
+                const operators = ['+', '-', '*', '/'];
+                const isOperator = operators.includes(lastChar);
+
+                if (expression === '' || isOperator) {
+                    expression += '(';
+                } else {
+                    // 檢查左括號是否多於右括號
+                    const openCount = (expression.match(/\(/g) || []).length;
+                    const closeCount = (expression.match(/\)/g) || []).length;
+                    
+                    if (openCount > closeCount) {
+                        expression += ')';
+                    } else {
+                        // 如果平衡了，則再按一次表示開始新運算
+                        expression += '*(';
+                    }
+                }
+
+            } else if (input === '+/-') {
+                try {
+                    // 嘗試對運算式求值並取反
+                    const val = evaluateExpression(expression);
+                    if (val !== null && !isNaN(val)) {
+                        expression = String(-val);
+                        lastValue = -val;
+                    } else {
+                        // 如果無法求值，則只在尾部加上一個 '-'
+                        expression += '-';
+                    }
+                } catch {
+                    expression += '-';
+                }
+            } else {
+                 // 處理運算符重複輸入
+                const lastChar = expression.slice(-1);
+                const operators = ['+', '-', '*', '/'];
+                const isOperator = operators.includes(lastChar);
+                const isNewOperator = operators.includes(input);
+
+                if (isOperator && isNewOperator && input !== '-') {
+                    // 替換重複的運算符（除了允許的負號）
+                    expression = expression.slice(0, -1) + input;
+                } else {
+                    expression += input;
+                }
+            }
+            // 每次輸入後嘗試更新 lastValue（如果運算式有效）
+            calculate(false);
+            updateDisplay();
+        }
         
-        st.session_state.displayed = final_list
-        safe_rerun()
+        /** 執行計算 */
+        function calculate(updateExpression = true) {
+            if (!expression) return;
+            try {
+                const result = evaluateExpression(expression);
+                if (result !== null && !isNaN(result) && isFinite(result)) {
+                    lastValue = result;
+                    if (updateExpression) {
+                        expression = String(result);
+                    }
+                } else if (isFinite(result) === false) {
+                     alert('錯誤: 除以零');
+                }
+            } catch (e) {
+                // 如果運算錯誤，只清空運算式，保持當前數值
+                console.error("計算錯誤:", e);
+                // 為了避免用戶體驗差，只在控制台顯示錯誤
+            }
+        }
+
+        /** 處理記憶體操作 */
+        function handleMemory(action) {
+            calculate(false); // 先計算當前輸入
+            
+            // lastValue * (匯率)：將當前幣別的數值轉換為 TWD 價值
+            const currentTWD = lastValue * (exchangeRates[currentCurrency] || 1); 
+
+            if (action === 'clear') {
+                memoryValue = 0;
+                alert('記憶已清除');
+            } else if (action === 'recall') {
+                // 從 TWD 換回當前幣別： (TWD 價值) / (匯率)
+                const recalledValue = memoryValue / (exchangeRates[currentCurrency] || 1);
+                lastValue = recalledValue;
+                expression = String(recalledValue);
+                alert(`已回憶數值`);
+            } else if (action === 'add') {
+                memoryValue += currentTWD;
+                alert('已加入記憶');
+            } else if (action === 'subtract') {
+                memoryValue -= currentTWD;
+                alert('已從記憶扣除');
+            }
+            updateDisplay();
+        }
+
+        /** 切換幣別 */
+        function changeCurrency(newCurrency) {
+            if (newCurrency === currentCurrency) return;
+            
+            // 執行計算，確保 lastValue 是最新的結果
+            calculate(false); 
+
+            const prevCurrency = currentCurrency;
+            
+            const prevRate = exchangeRates[prevCurrency] || 1;
+            const newRate = exchangeRates[newCurrency] || 1;
+
+            if (lastValue !== 0 && prevRate !== 0 && newRate !== 0) {
+                // lastValue * prevRate: 得到 TWD 價值
+                // (TWD 價值) / newRate: 得到新幣別價值
+                const valueInTWD = lastValue * prevRate;
+                const newValue = valueInTWD / newRate;
+                lastValue = newValue;
+                expression = String(newValue);
+            }
+
+            currentCurrency = newCurrency;
+            
+            // 強制重新渲染按鈕狀態
+            renderCurrencySelectors();
+            updateDisplay();
+        }
+
+        /** 安全地評估數學運算式 */
+        function evaluateExpression(expr) {
+            if (!expr) return 0;
+            // 限制運算式只能包含數字和基本運算符、點、括號
+            const cleanExpr = expr.replace(/[^-()\d/*+.]/g, '');
+            
+            try {
+                // 使用 Function 構造函數
+                return new Function('return ' + cleanExpr)();
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // ----------------------------------------------------
+        // IV. 應用程式啟動
+        // ----------------------------------------------------
+
+        window.onload = function() {
+            // 載入初始匯率數據
+            fetchRates(); 
+        };
+        
+        // 顯示警告訊息，因為 Streamlit 的 alert 不會彈出
+        function alert(message) {
+             // 使用固定在右上角的 Toast 通知代替瀏覽器 alert
+             const appDiv = document.getElementById('app');
+             const alertBox = document.createElement('div');
+             alertBox.className = "fixed top-4 right-4 bg-indigo-600 text-white p-3 rounded-lg shadow-xl z-50 transition-opacity duration-300";
+             alertBox.textContent = message;
+             document.body.appendChild(alertBox); // 附加到 body 以確保在最上層
+             
+             // 漸隱並移除
+             setTimeout(() => {
+                 alertBox.style.opacity = '0';
+                 setTimeout(() => alertBox.remove(), 300);
+             }, 2000);
+        }
+
+    </script>
+</body>
+</html>
 
