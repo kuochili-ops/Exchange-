@@ -2,8 +2,11 @@
 import streamlit as st
 import requests
 import pandas as pd
+import io
 import time
-import ast, operator as op
+import ast
+import operator as op
+import re
 
 # ---------- 設定 ----------
 BOT_CSV_URL = "https://rate.bot.com.tw/xrt/flcsv/0/day"
@@ -15,8 +18,21 @@ FLAGS = {
     "HKD":"🇭🇰","GBP":"🇬🇧","AUD":"🇦🇺","SGD":"🇸🇬","KRW":"🇰🇷"
 }
 
+# ---------- 工具函式（先定義，避免 NameError） ----------
+def format_number(n):
+    try:
+        s = float(n)
+    except Exception:
+        return "0"
+    s2 = ("{:.8f}".format(s)).rstrip('0').rstrip('.')
+    parts = s2.split('.')
+    try:
+        parts[0] = "{:,}".format(int(parts[0])) if parts[0] != '' else '0'
+    except Exception:
+        parts[0] = parts[0]
+    return parts[0] + ('.' + parts[1] if len(parts) > 1 else '')
+
 # ---------- 安全運算 evaluate（使用 ast） ----------
-# 支援 + - * / ( ) 小數
 ALLOWED_OPERATORS = {
     ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul, ast.Div: op.truediv,
     ast.USub: op.neg, ast.UAdd: op.pos
@@ -25,9 +41,14 @@ ALLOWED_OPERATORS = {
 def safe_eval(expr: str):
     """
     Evaluate a numeric expression safely using ast.
+    支援 + - * / ( ) 與一元正負號
     """
     def _eval(node):
-        if isinstance(node, ast.Num):  # <number>
+        if isinstance(node, ast.Constant):  # Python 3.8+
+            if isinstance(node.value, (int, float)):
+                return node.value
+            raise ValueError("不支援的常數類型")
+        if isinstance(node, ast.Num):  # older versions
             return node.n
         if isinstance(node, ast.UnaryOp) and type(node.op) in ALLOWED_OPERATORS:
             return ALLOWED_OPERATORS[type(node.op)](_eval(node.operand))
@@ -44,14 +65,15 @@ def safe_eval(expr: str):
 def fetch_rates():
     """
     取得 BOT CSV，解析成 dict: rates[code] = TWD per 1 unit
+    若抓取或解析失敗，回傳一組 fallback rates
     """
     try:
-        r = requests.get(BOT_CSV_URL, timeout=10)
+        r = requests.get(BOT_CSV_URL, timeout=12)
         r.encoding = 'utf-8'
         txt = r.text
-        # CSV 以逗號分隔，第一行 header
-        df = pd.read_csv(pd.compat.StringIO(txt))
-    except Exception:
+        # 以 pandas 讀取 CSV（使用 io.StringIO）
+        df = pd.read_csv(io.StringIO(txt))
+    except Exception as e:
         # fallback minimal
         return {"TWD":1.0, "USD":31.2, "JPY":0.22, "EUR":33.5, "CNY":4.5}
     rates = {}
@@ -60,7 +82,6 @@ def fetch_rates():
         cur_field = row.get('幣別') or row.get('Currency') or ''
         m = None
         if isinstance(cur_field, str):
-            import re
             m = re.search(r'`\((\w+)\)`', cur_field)
         code = m.group(1) if m else (row.get('Currency Code') or '').strip()
         if not code:
@@ -106,7 +127,15 @@ st.session_state.rates_updated = st.session_state.get('rates_updated') or time.s
 
 # 手動刷新匯率按鈕（會清除 cache 並重新抓）
 def refresh_rates():
-    fetch_rates.clear()
+    # 清除所有 st.cache_data 快取並重新抓取
+    try:
+        st.cache_data.clear()
+    except Exception:
+        # 若舊版 streamlit，嘗試呼叫 fetch_rates.clear()（若存在）
+        try:
+            fetch_rates.clear()
+        except Exception:
+            pass
     _ = fetch_rates()
     st.session_state.rates_updated = time.strftime("%Y-%m-%d %H:%M:%S")
     st.experimental_rerun()
@@ -151,7 +180,7 @@ for i, col in enumerate(cols):
                 st.session_state.selected = code
             st.experimental_rerun()
 
-# 計算機按鍵區（簡化版）
+# 計算機按鍵功能（簡潔實作）
 def press(ch):
     st.session_state.expr = st.session_state.expr + ch
 
@@ -167,8 +196,6 @@ def toggle_sign():
     if m == '':
         st.session_state.expr = '-'
     else:
-        # 嘗試把最後一個數字切換正負（簡單處理）
-        import re
         match = re.search(r'(-?\d+\.?\d*)$', m)
         if match:
             num = match.group(1)
@@ -183,7 +210,6 @@ def do_calculate():
         st.session_state.last = 0.0
         return
     # sanitize: 允許數字 . () +-*/ only
-    import re
     s2 = re.sub(r'[^0-9+\-*/().]', '', s)
     try:
         val = safe_eval(s2)
@@ -302,15 +328,6 @@ if st.button("套用選單"):
 
 st.markdown("---")
 st.caption("提示：在第一排按鍵點選貨幣可切換顯示；若已有計算結果，點選不同貨幣會立即換算。")
-
-# 工具函式
-def format_number(n):
-    try:
-        s = float(n)
-    except Exception:
-        return "0"
-    s2 = ("{:.8f}".format(s)).rstrip('0').rstrip('.')
-    return f"{s2:,}"
 
 # 顯示記憶值（TWD）
 st.sidebar.markdown(f"記憶（TWD）: {format_number(st.session_state.memory)}")
