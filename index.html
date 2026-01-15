@@ -3,134 +3,144 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>白六匯率計算機 - 藝術外皮版</title>
+    <title>白六即時匯率計算機 - App Skin 版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { --accent-color: #6366f1; }
-        body { font-family: 'Inter', sans-serif; transition: all 0.5s ease; margin:0; height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #f0f2f5; overflow: hidden; }
-        
-        /* 全螢幕背景容器 */
-        .bg-layer { position: fixed; top:0; left:0; width:100%; height:100%; z-index: -1; transition: all 0.8s ease; background-size: cover; background-position: center; filter: brightness(0.8); }
+        body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #333; overflow: hidden; font-family: 'Segoe UI', Roboto, sans-serif; }
 
-        /* 外皮類別定義 */
-        .skin-default-bg { background-color: #f0f2f5; }
-        .skin-hakka-bg { background-image: url('./skin-hakka.jpg'); }
-        .skin-starry-bg { background-image: url('./skin-starry.jpg'); }
+        /* 外層手機容器殼 */
+        .phone-shell {
+            width: 100%;
+            max-width: 400px;
+            height: 90vh;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+            border: 8px solid #ffffff; /* 白色 App 外邊框 */
+            border-radius: 3rem;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
-        /* 毛玻璃計算機本體 */
-        #app { 
-            width: 100%; max-width: 380px;
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 2.5rem;
+        /* 磨砂玻璃計算機主面板 */
+        .glass-container {
+            position: absolute;
+            bottom: 40px;
+            left: 20px;
+            right: 20px;
+            top: 60px;
+            background: rgba(255, 255, 255, 0.15); /* 極透明底色 */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 2rem;
             padding: 1.5rem;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
-            transition: all 0.4s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
-        /* 顯示區設計 */
-        .display-area { 
-            background: rgba(255, 255, 255, 0.85);
-            border-radius: 1.5rem;
-            padding: 1.25rem;
+        /* 顯示區 */
+        .display-area {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 1.2rem;
+            padding: 1rem;
             margin-bottom: 1.5rem;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
             text-align: right;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        /* 按鍵樣式 */
-        .calc-button { 
-            padding: 1.1rem 0; font-size: 1.2rem; font-weight: 700; border-radius: 1rem; 
-            transition: all 0.1s ease; user-select: none;
+        /* 按鍵基礎樣式 */
+        .calc-button {
+            border-radius: 1rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: all 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .calc-button:active { transform: scale(0.92); filter: brightness(0.9); }
+        .calc-button:active { transform: scale(0.9); background: rgba(255,255,255,0.3); }
+
+        /* 外皮特定配色邏輯 */
+        .skin-default { background-color: #4f46e5; }
+        .skin-hakka { background-image: url('./skin-hakka.jpg'); }
+        .skin-starry { background-image: url('./skin-starry.jpg'); }
+
+        /* 主題文字調整 */
+        .skin-starry h1 { color: #fde047; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .skin-starry .calc-button.number { background: rgba(253, 224, 71, 0.1); }
         
-        /* 針對不同外皮微調計算機色調 */
-        .skin-starry #app { background: rgba(18, 30, 62, 0.4); border-color: rgba(253, 224, 71, 0.2); }
-        .skin-starry .display-area { background: rgba(255, 255, 255, 0.9); }
-        .skin-starry h1 { color: #fde047; text-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        .skin-hakka h1 { color: #ffffff; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
 
-        .skin-hakka #app { background: rgba(0, 51, 153, 0.2); border-color: rgba(255,255,255,0.3); }
-        .skin-hakka h1 { color: #ffffff; }
-
-        .calculator-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        .currency-selector-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 1rem; }
+        .calculator-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; flex-grow: 1; }
+        .currency-selectors { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 1rem; }
     </style>
 </head>
 <body>
 
-  <div id="bg-layer" class="bg-layer skin-default-bg"></div>
+  <div id="app-shell" class="phone-shell skin-default">
+    
+    <div class="glass-container">
+        <header class="mb-6 text-center">
+            <h1 class="text-3xl font-black italic tracking-widest text-white">BAILIU CALC</h1>
+            <p id="update-status" class="text-[9px] font-bold tracking-widest text-white/60 mt-1 uppercase">Ready for Exchange</p>
+        </header>
 
-  <div id="app">
-    <header class="mb-4 text-center">
-        <h1 class="text-2xl font-black italic tracking-tighter transition-colors duration-500">BAILIU CALC</h1>
-        <p id="update-status" class="text-[9px] opacity-60 font-bold uppercase tracking-[0.2em] mt-1 text-gray-500">Live Rates Connecting...</p>
-    </header>
-
-    <div class="display-area">
-        <div id="display-expression" class="h-5 text-gray-400 text-xs font-mono mb-1 truncate"></div>
-        <div class="flex justify-between items-center">
-            <div id="display-currency-flag" class="text-xl">🇹🇼</div>
-            <div id="display-value" class="text-3xl font-black font-mono text-gray-800 truncate">0</div>
+        <div class="display-area">
+            <div id="display-expr" class="text-white/50 text-xs font-mono h-4 mb-1"></div>
+            <div class="flex justify-between items-center">
+                <span id="display-flag" class="text-xl">🇹🇼</span>
+                <span id="display-val" class="text-3xl font-black text-white font-mono">0</span>
+            </div>
         </div>
-    </div>
 
-    <div id="currency-selectors" class="currency-selector-grid"></div>
+        <div id="currency-bar" class="currency-selectors"></div>
 
-    <div class="calculator-grid">
-        <button onclick="handleMemory('clear')" class="calc-button bg-white/40 text-gray-700">MC</button>
-        <button onclick="handleMemory('recall')" class="calc-button bg-white/40 text-gray-700">MR</button>
-        <button onclick="handleMemory('add')" class="calc-button bg-white/40 text-gray-700">M+</button>
-        <button onclick="handleMemory('subtract')" class="calc-button bg-white/40 text-gray-700">M-</button>
+        <div class="calculator-grid">
+            <button onclick="handleInput('C')" class="calc-button bg-red-500/80">C</button>
+            <button onclick="handleInput('⌫')" class="calc-button">⌫</button>
+            <button onclick="toggleSettings()" class="calc-button bg-indigo-500/80">⚙️</button>
+            <button onclick="handleInput('/')" class="calc-button bg-orange-500/80">÷</button>
 
-        <button onclick="handleInput('C')" class="calc-button bg-red-500 text-white shadow-lg">C</button>
-        <button onclick="handleInput('⌫')" class="calc-button bg-gray-400/80 text-white">⌫</button>
-        <button onclick="toggleModal()" class="calc-button bg-indigo-600 text-white shadow-lg">⚙️</button>
-        <button onclick="handleInput('/')" class="calc-button bg-amber-500 text-white">÷</button>
+            <button onclick="handleInput('7')" class="calc-button number">7</button>
+            <button onclick="handleInput('8')" class="calc-button number">8</button>
+            <button onclick="handleInput('9')" class="calc-button number">9</button>
+            <button onclick="handleInput('*')" class="calc-button bg-orange-500/80">×</button>
 
-        <button onclick="handleInput('7')" class="calc-button bg-white/80 text-gray-800 shadow-sm">7</button>
-        <button onclick="handleInput('8')" class="calc-button bg-white/80 text-gray-800 shadow-sm">8</button>
-        <button onclick="handleInput('9')" class="calc-button bg-white/80 text-gray-800 shadow-sm">9</button>
-        <button onclick="handleInput('*')" class="calc-button bg-amber-500 text-white">×</button>
+            <button onclick="handleInput('4')" class="calc-button number">4</button>
+            <button onclick="handleInput('5')" class="calc-button number">5</button>
+            <button onclick="handleInput('6')" class="calc-button number">6</button>
+            <button onclick="handleInput('-')" class="calc-button bg-orange-500/80">-</button>
 
-        <button onclick="handleInput('4')" class="calc-button bg-white/80 text-gray-800 shadow-sm">4</button>
-        <button onclick="handleInput('5')" class="calc-button bg-white/80 text-gray-800 shadow-sm">5</button>
-        <button onclick="handleInput('6')" class="calc-button bg-white/80 text-gray-800 shadow-sm">6</button>
-        <button onclick="handleInput('-')" class="calc-button bg-amber-500 text-white">-</button>
+            <button onclick="handleInput('1')" class="calc-button number">1</button>
+            <button onclick="handleInput('2')" class="calc-button number">2</button>
+            <button onclick="handleInput('3')" class="calc-button number">3</button>
+            <button onclick="handleInput('+')" class="calc-button bg-orange-500/80">+</button>
 
-        <button onclick="handleInput('1')" class="calc-button bg-white/80 text-gray-800 shadow-sm">1</button>
-        <button onclick="handleInput('2')" class="calc-button bg-white/80 text-gray-800 shadow-sm">2</button>
-        <button onclick="handleInput('3')" class="calc-button bg-white/80 text-gray-800 shadow-sm">3</button>
-        <button onclick="handleInput('+')" class="calc-button bg-amber-500 text-white">+</button>
-
-        <button onclick="handleInput('0')" class="calc-button bg-white/80 text-gray-800 shadow-sm">0</button>
-        <button onclick="handleInput('.')" class="calc-button bg-white/80 text-gray-800 shadow-sm">.</button>
-        <button onclick="handleInput('+/-')" class="calc-button bg-gray-400/80 text-white">±</button>
-        <button onclick="calculate()" class="calc-button bg-emerald-500 text-white">=</button>
+            <button onclick="handleInput('0')" class="calc-button number">0</button>
+            <button onclick="handleInput('.')" class="calc-button number">.</button>
+            <button onclick="handleInput('+/-')" class="calc-button">±</button>
+            <button onclick="calculate()" class="calc-button bg-emerald-500/80">=</button>
+        </div>
     </div>
   </div>
 
-  <div id="currency-modal" class="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm p-6 overflow-hidden">
-      <h2 class="text-xl font-black mb-4 border-b pb-2 italic">SETTINGS</h2>
+  <div id="settings-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-6 z-50 hidden">
+    <div class="bg-white rounded-[2.5rem] w-full max-w-sm p-8">
+      <h2 class="text-xl font-bold mb-6 text-gray-800 border-b pb-2">選擇主題 Skin</h2>
       
-      <div class="mb-6">
-        <p class="text-[10px] font-bold text-gray-400 mb-3 uppercase tracking-widest">Select Visual Skin</p>
-        <div class="grid grid-cols-3 gap-2">
-            <button onclick="changeSkin('default')" class="py-2 text-xs font-bold rounded-xl border-2 border-gray-100 hover:border-indigo-500 transition bg-gray-50">Minimal</button>
-            <button onclick="changeSkin('hakka')" class="py-2 text-xs font-bold rounded-xl border-2 border-blue-900 bg-blue-50 text-blue-900">客家花紋</button>
-            <button onclick="changeSkin('starry')" class="py-2 text-xs font-bold rounded-xl border-2 border-yellow-500 bg-indigo-900 text-yellow-400">梵谷星夜</button>
-        </div>
+      <div class="grid grid-cols-1 gap-3 mb-8">
+        <button onclick="changeSkin('default')" class="w-full py-3 rounded-2xl bg-indigo-600 text-white font-bold">預設極簡</button>
+        <button onclick="changeSkin('hakka')" class="w-full py-3 rounded-2xl bg-blue-900 text-white font-bold">客家碎花布</button>
+        <button onclick="changeSkin('starry')" class="w-full py-3 rounded-2xl bg-slate-900 text-yellow-400 font-bold border-2 border-yellow-500">梵谷星夜</button>
       </div>
 
-      <p class="text-[10px] font-bold text-gray-400 mb-3 uppercase tracking-widest">Exchange Rates</p>
-      <div id="modal-currency-list" class="grid grid-cols-3 gap-2 max-h-[25vh] overflow-y-auto pr-1"></div>
-
-      <button onclick="closeModal()" class="mt-6 w-full py-4 bg-black text-white font-black rounded-2xl hover:bg-gray-800 transition">
-        DONE
-      </button>
+      <button onclick="toggleSettings()" class="w-full py-4 bg-gray-100 text-gray-800 font-black rounded-2xl">關閉設定</button>
     </div>
   </div>
 
@@ -139,144 +149,63 @@
     let lastValue = 0;
     let currentCurrency = 'TWD';
     let exchangeRates = {};
-    let memoryValue = 0;
     let DEFAULT_CURRENCIES = ['TWD','JPY','USD','EUR','CNY'];
-    const FLAGS = {"TWD":"🇹🇼 TWD","USD":"🇺🇸 USD","JPY":"🇯🇵 JPY","EUR":"🇪🇺 EUR","CNY":"🇨🇳 CNY","HKD":"🇭🇰 HKD","GBP":"🇬🇧 GBP","AUD":"🇦🇺 AUD","SGD":"🇸🇬 SGD","KRW":"🇰🇷 KRW","VND":"🇻🇳 VND","THB":"🇹🇭 THB"};
+    const FLAGS = {"TWD":"🇹🇼","USD":"🇺🇸","JPY":"🇯🇵","EUR":"🇪🇺","CNY":"🇨🇳"};
 
-    // --- 外皮切換功能 ---
+    // 切換 Skin
     function changeSkin(skinName) {
-        const bg = document.getElementById('bg-layer');
-        const app = document.getElementById('app');
-        
-        // 切換背景圖
-        bg.className = `bg-layer skin-${skinName}-bg`;
-        // 切換本體樣式
-        app.parentElement.className = `skin-${skinName}`; 
-        document.body.className = `skin-${skinName}`;
-
-        localStorage.setItem('user-skin-choice', skinName);
-        toast(`Applied: ${skinName}`);
+        const shell = document.getElementById('app-shell');
+        shell.className = `phone-shell skin-${skinName}`;
+        localStorage.setItem('user-app-skin', skinName);
     }
 
-    // --- 匯率與計算 (核心邏輯) ---
-    async function fetchRates(){
-      try{
-        const res = await fetch('https://open.er-api.com/v6/latest/TWD');
-        const data = await res.json();
-        const converted = {"TWD":1.0};
-        for(const [code,rate] of Object.entries(data.rates)) converted[code] = 1 / rate;
-        exchangeRates = converted;
-        document.getElementById('update-status').textContent = `Live: ${new Date().toLocaleTimeString()}`;
-        renderCurrencySelectors();
-        updateDisplay();
-      }catch(e){ document.getElementById('update-status').textContent = 'Rates Offline'; }
+    // 計算邏輯
+    function handleInput(input) {
+        if(input === 'C') { expression = ''; lastValue = 0; }
+        else if(input === '⌫') { expression = expression.slice(0, -1); }
+        else { expression += input; }
+        try { 
+            const evalResult = eval(expression.replace(/[^-()\d/*+.]/g,''));
+            if(isFinite(evalResult)) lastValue = evalResult;
+        } catch(e) {}
+        updateUI();
     }
 
-    function updateDisplay(){
-      document.getElementById('display-expression').textContent = expression;
-      document.getElementById('display-value').textContent = Number(lastValue).toLocaleString(undefined, {maximumFractionDigits: 4});
-      document.getElementById('display-currency-flag').textContent = FLAGS[currentCurrency]?.split(' ')[0] || '';
-    }
-
-    function handleInput(input){
-      if(input==='C'){ expression=''; lastValue=0; }
-      else if(input==='⌫') expression = expression.slice(0,-1);
-      else if(input==='+/-') { calculate(true); lastValue = -lastValue; expression = String(lastValue); }
-      else { expression += input; }
-      calculate(false);
-      updateDisplay();
-    }
-
-    function calculate(updateExpression=true){
-      try {
-        if(!expression) return;
-        const result = eval(expression.replace(/[^-()\d/*+.]/g,''));
-        if(isFinite(result)){
-            lastValue = result;
-            if(updateExpression) expression = String(result);
-        }
-      } catch(e){}
-    }
-
-    function changeCurrency(newCurrency){
-      if(newCurrency === currentCurrency) return;
-      calculate(true);
-      const valInTwd = lastValue * (exchangeRates[currentCurrency] || 1);
-      lastValue = valInTwd / (exchangeRates[newCurrency] || 1);
-      expression = String(lastValue);
-      currentCurrency = newCurrency;
-      renderCurrencySelectors();
-      updateDisplay();
-    }
-
-    function renderCurrencySelectors(){
-      const container = document.getElementById('currency-selectors');
-      container.innerHTML = '';
-      DEFAULT_CURRENCIES.forEach(code => {
-        const active = code === currentCurrency;
-        const btn = document.createElement('button');
-        btn.textContent = code;
-        btn.className = `py-2 text-[10px] font-black rounded-lg transition-all ${active ? 'bg-indigo-600 text-white scale-105 shadow-md' : 'bg-white/50 text-gray-600 hover:bg-white'}`;
-        btn.onclick = () => changeCurrency(code);
-        container.appendChild(btn);
-      });
-    }
-
-    function toggleModal(){ 
-        document.getElementById('currency-modal').classList.toggle('hidden'); 
-        renderModalCurrencies(); 
-    }
-    function closeModal(){ document.getElementById('currency-modal').classList.add('hidden'); }
-    
-    function renderModalCurrencies(){
-      const list = document.getElementById('modal-currency-list');
-      list.innerHTML = '';
-      Object.keys(FLAGS).forEach(code => {
-        const isSelected = DEFAULT_CURRENCIES.includes(code);
-        const div = document.createElement('div');
-        div.className = `p-2 border-2 rounded-xl text-center cursor-pointer text-xs ${isSelected ? 'border-indigo-500 bg-indigo-50' : 'border-gray-100'}`;
-        div.innerHTML = `<div class="text-lg">${FLAGS[code].split(' ')[0]}</div><div class="font-bold">${code}</div>`;
-        div.onclick = () => {
-            if(code === 'TWD') return;
-            const idx = DEFAULT_CURRENCIES.indexOf(code);
-            if(idx === -1) {
-                DEFAULT_CURRENCIES[1] = code; // 簡單替換
-                toast(`Currency swapped to ${code}`);
+    function calculate() {
+        try {
+            const result = eval(expression.replace(/[^-()\d/*+.]/g,''));
+            if(isFinite(result)) {
+                expression = String(result);
+                lastValue = result;
             }
-            renderModalCurrencies();
-            renderCurrencySelectors();
-        };
-        list.appendChild(div);
-      });
+        } catch(e) {}
+        updateUI();
     }
 
-    function handleMemory(action){
-      calculate(true);
-      const currentTwd = lastValue * (exchangeRates[currentCurrency] || 1);
-      if(action==='add') memoryValue += currentTwd;
-      else if(action==='subtract') memoryValue -= currentTwd;
-      else if(action==='clear') memoryValue = 0;
-      else if(action==='recall') {
-          lastValue = memoryValue / (exchangeRates[currentCurrency] || 1);
-          expression = String(lastValue);
-      }
-      toast('Memory Updated');
-      updateDisplay();
+    function updateUI() {
+        document.getElementById('display-expr').textContent = expression;
+        document.getElementById('display-val').textContent = Number(lastValue).toLocaleString();
+        document.getElementById('display-flag').textContent = FLAGS[currentCurrency] || '💰';
     }
 
-    function toast(msg){
-        const t = document.createElement('div');
-        t.className = "fixed top-10 bg-black/80 text-white px-6 py-2 rounded-full text-xs font-bold z-[200] animate-bounce";
-        t.textContent = msg;
-        document.body.appendChild(t);
-        setTimeout(()=>t.remove(), 2000);
-    }
+    function toggleSettings() { document.getElementById('settings-modal').classList.toggle('hidden'); }
 
-    window.onload = () => {
-        fetchRates();
-        const savedSkin = localStorage.getItem('user-skin-choice') || 'default';
+    // 初始化匯率與常用幣別 (模組化)
+    function initApp() {
+        const bar = document.getElementById('currency-bar');
+        DEFAULT_CURRENCIES.forEach(code => {
+            const btn = document.createElement('button');
+            btn.textContent = code;
+            btn.className = "py-1 text-[10px] font-bold text-white/70 border border-white/20 rounded-md bg-white/10";
+            btn.onclick = () => { currentCurrency = code; updateUI(); };
+            bar.appendChild(btn);
+        });
+        const savedSkin = localStorage.getItem('user-app-skin') || 'default';
         changeSkin(savedSkin);
-    };
+        updateUI();
+    }
+
+    window.onload = initApp;
   </script>
 </body>
 </html>
