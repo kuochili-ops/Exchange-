@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>白六即時匯率計算機 - 99% 極透藝術版</title>
+    <title>白六即時匯率計算機 - 極透修復版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #000; font-family: 'Inter', sans-serif; overflow: hidden; }
 
-        /* 手機殼：背景圖片完全滿版 */
+        /* 背景圖片完全滿版 */
         .phone-shell {
             width: 100vw;
             max-width: 430px;
@@ -16,102 +16,72 @@
             position: relative;
             background-size: cover;
             background-position: center;
-            transition: background-image 0.8s ease-in-out;
+            transition: background-image 0.5s ease-in-out;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        /* 計算機主面板：99% 透明 (Alpha 0.01) */
+        /* 99% 透明面板 (Alpha 0.01) */
         .calc-panel {
-            width: 90%;
-            height: 85%;
+            width: 92%;
+            height: 88%;
             background: rgba(255, 255, 255, 0.01); 
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 3rem;
-            padding: 2.5rem 1.5rem;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 2.5rem;
+            padding: 2rem 1.2rem;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4);
         }
 
         /* 顯示區 */
-        .display-area {
-            text-align: right;
-            margin-bottom: 1.5rem;
-            padding: 0 0.5rem;
-        }
+        .display-area { text-align: right; margin-bottom: 1.5rem; }
 
-        /* 三字母幣別快速切換列 */
-        .country-selector {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
-            margin-bottom: 1.5rem;
-        }
-        
+        /* 三字母快速切換列 */
+        .country-selector { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 1.5rem; }
         .country-tab {
-            padding: 10px 0;
-            font-size: 12px;
-            font-weight: 800;
-            color: white;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
+            padding: 10px 0; font-size: 11px; font-weight: 800; color: white;
+            background: rgba(255, 255, 255, 0.1); border-radius: 10px;
+            text-align: center; cursor: pointer; transition: 0.2s;
         }
         .country-tab.active { background: white; color: black; }
 
-        /* 按鍵：維持 60% 透明 */
-        .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; flex-grow: 1; }
+        /* 按鍵透明度 60% (Alpha 0.4) */
+        .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; flex-grow: 1; }
         .btn {
-            background: rgba(255, 255, 255, 0.4); 
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1.2rem;
-            color: white;
-            font-size: 1.4rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.1s;
+            background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1.2rem; color: white; font-size: 1.3rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; transition: 0.1s;
         }
-        .btn:active { transform: scale(0.92); background: rgba(255, 255, 255, 0.6); }
+        .btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.6); }
 
         .btn-op { background: rgba(245, 158, 11, 0.45); } 
         .btn-func { background: rgba(99, 102, 241, 0.45); } 
         .btn-clear { background: rgba(239, 68, 68, 0.45); } 
 
         .theme-btn {
-            position: absolute;
-            top: 40px;
-            right: 30px;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 6px 15px;
-            border-radius: 50px;
-            font-size: 12px;
-            font-weight: 800;
-            backdrop-filter: blur(10px);
-            z-index: 100;
+            position: absolute; top: 30px; right: 20px;
+            background: rgba(255, 255, 255, 0.2); color: white;
+            padding: 5px 12px; border-radius: 50px; font-size: 11px; font-weight: 800;
+            backdrop-filter: blur(10px); z-index: 100; border: 1px solid rgba(255,255,255,0.2);
         }
     </style>
 </head>
 <body>
 
     <div id="shell" class="phone-shell">
-        <button onclick="switchTheme()" class="theme-btn">🎨 切換主題</button>
+        <button onclick="switchTheme()" class="theme-btn">🎨 主題切換</button>
 
         <div class="calc-panel">
-            <header class="mb-6">
-                <h1 id="title" class="text-3xl font-black italic tracking-tighter text-white text-center">BAILIU CALC</h1>
+            <header class="mb-4">
+                <h1 class="text-2xl font-black italic tracking-tighter text-white text-center opacity-80">BAILIU CALC</h1>
             </header>
 
             <div class="display-area">
-                <div id="history" class="text-white/30 text-xs font-mono h-4 mb-1"></div>
+                <div id="history" class="text-white/30 text-xs font-mono h-4 mb-1 overflow-hidden"></div>
                 <div class="flex justify-between items-center">
                     <span id="flag-display" class="text-3xl">🇹🇼</span>
                     <span id="val" class="text-5xl font-black text-white font-mono">0</span>
@@ -149,10 +119,10 @@
         </div>
     </div>
 
-    <div id="menu" class="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[200] hidden flex flex-col p-10">
-        <h2 class="text-white text-2xl font-black mb-8 italic">幣別管理</h2>
-        <div id="full-list" class="grid grid-cols-1 gap-3 overflow-y-auto pr-2"></div>
-        <button onclick="closeMenu()" class="mt-auto w-full py-5 bg-white text-black font-black rounded-3xl">儲存並關閉</button>
+    <div id="menu" class="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[200] hidden flex flex-col p-8">
+        <h2 class="text-white text-xl font-black mb-6 italic">幣別管理 (國名)</h2>
+        <div id="full-list" class="grid grid-cols-1 gap-3 overflow-y-auto"></div>
+        <button onclick="closeMenu()" class="mt-auto w-full py-4 bg-white text-black font-black rounded-2xl">儲存並返回</button>
     </div>
 
     <script>
@@ -179,11 +149,17 @@
         
         let myFavs = ['TWD', 'JPY', 'USD', 'CNY', 'EUR'];
 
+        // 修復切換邏輯：統一使用 .jpg 檔案
         function switchTheme() {
             currentSkin = (currentSkin === 'starry') ? 'hakka' : 'starry';
+            applySkin();
+        }
+
+        function applySkin() {
             const shell = document.getElementById('shell');
+            // 確保路徑與您上傳的 skin-starry.jpg / skin-hakka.jpg 一致
             shell.style.backgroundImage = `url('./skin-${currentSkin}.jpg')`;
-            localStorage.setItem('calc-skin', currentSkin);
+            localStorage.setItem('calc-skin-v2', currentSkin);
         }
 
         async function initRates() {
@@ -193,7 +169,7 @@
                 for(let [c, r] of Object.entries(data.rates)) rates[c] = 1/r;
                 rates['TWD'] = 1.0;
                 renderSelector();
-            } catch(e) { console.error("Rate fetch failed"); }
+            } catch(e) { console.error("Rates fetch error"); }
         }
 
         function renderSelector() {
@@ -202,7 +178,7 @@
             myFavs.forEach(code => {
                 const tab = document.createElement('div');
                 tab.className = `country-tab ${code === activeCode ? 'active' : ''}`;
-                tab.textContent = code; // 主畫面顯示縮寫
+                tab.textContent = code; // 主介面顯示縮寫
                 tab.onclick = () => {
                     const twdVal = result * (rates[activeCode] || 1);
                     result = twdVal / (rates[code] || 1);
@@ -221,8 +197,7 @@
             else if(k === '+/-') { result = -result; expr = String(result); }
             else { expr += k; }
             try { 
-                const cleanedExpr = expr.replace(/[^-()\d/*+.]/g,'');
-                const res = eval(cleanedExpr);
+                const res = eval(expr.replace(/[^-()\d/*+.]/g,''));
                 if(isFinite(res)) result = res;
             } catch(e) {}
             updateUI();
@@ -238,7 +213,7 @@
 
         function updateUI() {
             document.getElementById('history').textContent = expr;
-            // 限制小數點後兩位
+            // 限制兩位小數
             document.getElementById('val').textContent = Number(result.toFixed(2)).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
             document.getElementById('flag-display').textContent = COUNTRY_DATA[activeCode]?.flag || '💰';
         }
@@ -250,14 +225,14 @@
             Object.keys(COUNTRY_DATA).forEach(code => {
                 const picked = myFavs.includes(code);
                 const item = document.createElement('div');
-                // 選單顯示國旗 + 完整國名
-                item.className = `p-4 rounded-2xl flex justify-between items-center transition-all ${picked ? 'bg-white/20 text-white' : 'bg-white/5 text-white/30'}`;
+                // 選單顯示完整國名
+                item.className = `p-4 rounded-xl flex justify-between items-center ${picked ? 'bg-white/20 text-white' : 'bg-white/5 text-white/30'}`;
                 item.innerHTML = `
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-4">
                         <span class="text-2xl">${COUNTRY_DATA[code].flag}</span>
                         <span class="font-bold">${COUNTRY_DATA[code].name}</span>
                     </div>
-                    <span class="text-xs opacity-50">${code}</span>
+                    <span class="text-xs font-mono opacity-40">${code}</span>
                 `;
                 item.onclick = () => {
                     if(myFavs.includes(code)) {
@@ -278,9 +253,8 @@
 
         window.onload = () => {
             initRates();
-            const saved = localStorage.getItem('calc-skin') || 'starry';
-            currentSkin = saved;
-            document.getElementById('shell').style.backgroundImage = `url('./skin-${saved}.jpg')`;
+            currentSkin = localStorage.getItem('calc-skin-v2') || 'starry';
+            applySkin();
             updateUI();
         };
     </script>
