@@ -63,7 +63,6 @@
             backdrop-filter: blur(10px); z-index: 50; border: 1px solid rgba(255,255,255,0.4);
         }
 
-        /* 隱藏捲軸但保留功能 */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -118,9 +117,9 @@
     </div>
 
     <div id="menu" class="fixed inset-0 bg-black/95 backdrop-blur-3xl z-[100] hidden flex flex-col p-8">
-        <h2 class="text-white text-3xl font-black mb-6 italic tracking-tight">幣別選擇 <span class="text-sm font-normal opacity-50 block">請挑選 5 個常用國家</span></h2>
-        <div id="full-list" class="flex-grow overflow-y-auto no-scrollbar grid grid-cols-1 gap-3 pb-8"></div>
-        <button onclick="closeMenu()" class="w-full py-5 bg-white text-black font-black rounded-3xl shadow-2xl active:scale-95 transition-transform">儲存設置</button>
+        <h2 class="text-white text-3xl font-black mb-6 italic tracking-tight">CURRENCY SELECT <span class="text-sm font-normal opacity-50 block">請挑選 5 個常用國家</span></h2>
+        <div id="full-list" class="flex-grow overflow-y-auto no-scrollbar grid grid-cols-1 gap-4 pb-8"></div>
+        <button onclick="closeMenu()" class="w-full py-5 bg-white text-black font-black rounded-3xl shadow-2xl active:scale-95 transition-transform">儲存設置 SAVE</button>
     </div>
 
     <script>
@@ -131,26 +130,24 @@
         let activeCode = 'TWD';
         let rates = {};
 
-        // 擴展後的國家清單
         const COUNTRY_DATA = {
-            "TWD": { name: "台灣", flag: "🇹🇼" },
-            "JPY": { name: "日本", flag: "🇯🇵" },
-            "USD": { name: "美國", flag: "🇺🇸" },
-            "KRW": { name: "韓國", flag: "🇰🇷" },
-            "THB": { name: "泰國", flag: "🇹🇭" },
-            "EUR": { name: "歐元區", flag: "🇪🇺" },
-            "GBP": { name: "英國", flag: "🇬🇧" },
-            "CAD": { name: "加拿大", flag: "🇨🇦" },
-            "SGD": { name: "新加坡", flag: "🇸🇬" },
-            "CNY": { name: "中國", flag: "🇨🇳" },
-            "HKD": { name: "香港", flag: "🇭🇰" },
-            "CHF": { name: "瑞士", flag: "🇨🇭" },
-            "SEK": { name: "瑞典", flag: "🇸🇪" },
-            "AUD": { name: "澳洲", flag: "🇦🇺" },
-            "VND": { name: "越南", flag: "🇻🇳" }
+            "TWD": { en: "Taiwan", cn: "台灣", flag: "🇹🇼" },
+            "JPY": { en: "Japan", cn: "日本", flag: "🇯🇵" },
+            "USD": { en: "United States", cn: "美國", flag: "🇺🇸" },
+            "KRW": { en: "South Korea", cn: "韓國", flag: "🇰🇷" },
+            "THB": { en: "Thailand", cn: "泰國", flag: "🇹🇭" },
+            "EUR": { en: "Euro Zone", cn: "歐元區", flag: "🇪🇺" },
+            "GBP": { en: "United Kingdom", cn: "英國", flag: "🇬🇧" },
+            "CAD": { en: "Canada", cn: "加拿大", flag: "🇨🇦" },
+            "SGD": { en: "Singapore", cn: "新加坡", flag: "🇸🇬" },
+            "CNY": { en: "China", cn: "中國", flag: "🇨🇳" },
+            "HKD": { en: "Hong Kong", cn: "香港", flag: "🇭🇰" },
+            "CHF": { en: "Switzerland", cn: "瑞士", flag: "🇨🇭" },
+            "SEK": { en: "Sweden", cn: "瑞典", flag: "🇸🇪" },
+            "AUD": { en: "Australia", cn: "澳洲", flag: "🇦🇺" },
+            "VND": { en: "Vietnam", cn: "越南", flag: "🇻🇳" }
         };
         
-        // 初始常用的 5 個
         let myFavs = ['TWD', 'JPY', 'USD', 'THB', 'EUR'];
 
         function renderFlipValue(val) {
@@ -240,17 +237,16 @@
             Object.keys(COUNTRY_DATA).forEach(code => {
                 const picked = myFavs.includes(code);
                 const item = document.createElement('div');
-                item.className = `p-5 rounded-3xl flex justify-between items-center transition-all ${picked ? 'bg-white/20 border-white/30 text-white' : 'bg-white/5 border-transparent text-white/30'}`;
-                item.style.borderWidth = '1px';
+                item.className = `p-6 rounded-[2rem] flex justify-between items-center transition-all ${picked ? 'bg-white/25 border-white/40 text-white' : 'bg-white/5 border-transparent text-white/30'}`;
+                item.style.borderWidth = '1.5px';
                 item.innerHTML = `
-                    <div class="flex items-center gap-5">
-                        <span class="text-4xl">${COUNTRY_DATA[code].flag}</span>
+                    <div class="flex items-center gap-6">
+                        <span class="text-5xl">${COUNTRY_DATA[code].flag}</span>
                         <div>
-                            <div class="font-black text-xl leading-none">${code}</div>
-                            <div class="text-xs opacity-60 mt-1">${COUNTRY_DATA[code].name}</div>
+                            <div class="font-black text-2xl tracking-tight leading-none uppercase">${COUNTRY_DATA[code].en}</div>
+                            <div class="text-xl font-bold opacity-70 mt-2">${COUNTRY_DATA[code].cn} <span class="text-sm font-normal opacity-50">(${code})</span></div>
                         </div>
                     </div>
-                    ${picked ? '<div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>' : ''}
                 `;
                 item.onclick = () => {
                     if(myFavs.includes(code)) { if(myFavs.length > 1) myFavs = myFavs.filter(c => c !== code); }
