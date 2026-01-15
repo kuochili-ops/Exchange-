@@ -3,54 +3,61 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>BAILIU CALC - 翻牌動效版</title>
+    <title>BAILIU CALC - 極致透明版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #000; font-family: 'Inter', sans-serif; overflow: hidden; }
 
-        /* 背景容器 */
         .phone-shell {
             width: 100vw; max-width: 430px; height: 100vh;
             position: relative; background-size: cover; background-position: center;
-            transition: background-image 0.6s ease-in-out;
+            transition: background-image 0.8s ease-in-out;
             display: flex; align-items: center; justify-content: center;
         }
 
-        /* 99% 極透面板 */
+        /* --- 透明度優化設定 --- */
         .calc-panel {
-            width: 92%; height: 88%; background: rgba(255, 255, 255, 0); 
-            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 3rem;
+            width: 92%; height: 88%; 
+            /* 1. 背景設為完全透明 */
+            background: rgba(255, 255, 255, 0.02); 
+            /* 2. 降低模糊度 (從 25px 改為 10px) 並增加飽和度 */
+            backdrop-filter: blur(10px) saturate(160%); 
+            -webkit-backdrop-filter: blur(10px) saturate(160%);
+            /* 3. 極細邊框增加高級感 */
+            border: 1px solid rgba(255, 255, 255, 0.15); 
+            border-radius: 3.5rem;
             padding: 2.5rem 1.2rem; display: flex; flex-direction: column;
-            box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
-        /* Flip-board 模組樣式 */
-        #val-display { transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1); }
-        .val-animate { transform: translateY(-8px); opacity: 0; }
+        /* Flip-board 模組核心 CSS */
+        #val-display { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .val-flip { transform: scale(1.1) translateY(-5px); opacity: 0; filter: blur(4px); }
 
         .country-tab {
             padding: 10px 0; font-size: 11px; font-weight: 800; color: white;
             background: rgba(255, 255, 255, 0.1); border-radius: 12px;
             text-align: center; cursor: pointer; transition: 0.2s;
         }
-        .country-tab.active { background: white; color: black; }
+        .country-tab.active { background: white; color: black; box-shadow: 0 4px 15px rgba(255,255,255,0.3); }
 
+        /* 按鍵也要透明 */
         .btn {
-            background: rgba(255, 255, 255, 0.35); border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 1.2rem; color: white; font-size: 1.4rem; font-weight: 700;
+            background: rgba(255, 255, 255, 0.15); 
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1.5rem; color: white; font-size: 1.4rem; font-weight: 700;
             display: flex; align-items: center; justify-content: center; transition: 0.1s;
         }
-        .btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.5); }
-        .btn-op { background: rgba(245, 158, 11, 0.4); } 
-        .btn-func { background: rgba(99, 102, 241, 0.4); } 
-        .btn-clear { background: rgba(239, 68, 68, 0.4); } 
+        .btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.3); }
+        .btn-op { background: rgba(245, 158, 11, 0.3); } 
+        .btn-func { background: rgba(99, 102, 241, 0.3); } 
+        .btn-clear { background: rgba(239, 68, 68, 0.3); } 
 
         .theme-btn {
             position: absolute; top: 50px; right: 30px;
-            background: rgba(255, 255, 255, 0.15); color: white;
+            background: rgba(255, 255, 255, 0.2); color: white;
             padding: 6px 14px; border-radius: 50px; font-size: 11px; font-weight: 800;
-            backdrop-filter: blur(10px); z-index: 50; border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px); z-index: 50; border: 1px solid rgba(255,255,255,0.3);
         }
     </style>
 </head>
@@ -61,13 +68,13 @@
 
         <div class="calc-panel">
             <header class="mb-6 text-center">
-                <h1 id="brand-name" class="text-2xl font-black italic tracking-tighter text-white opacity-60">BAILIU CALC</h1>
+                <h1 id="brand" class="text-2xl font-black italic tracking-tighter text-white opacity-80">BAILIU CALC</h1>
             </header>
 
             <div class="mb-8 px-2">
                 <div id="history" class="text-right text-white/30 text-xs font-mono h-4 mb-1"></div>
                 <div class="flex justify-between items-end">
-                    <span id="flag-display" class="text-4xl leading-none">🇹🇼</span>
+                    <span id="flag-display" class="text-4xl">🇹🇼</span>
                     <div id="val-display" class="text-5xl font-black text-white font-mono tracking-tighter">0</div>
                 </div>
             </div>
@@ -99,16 +106,16 @@
         </div>
     </div>
 
-    <div id="menu" class="fixed inset-0 bg-black/95 backdrop-blur-3xl z-[100] hidden flex flex-col p-10">
+    <div id="menu" class="fixed inset-0 bg-black/90 backdrop-blur-3xl z-[100] hidden flex flex-col p-10">
         <h2 class="text-white text-2xl font-black mb-8 italic">幣別管理</h2>
         <div id="full-list" class="grid grid-cols-1 gap-4 overflow-y-auto pr-2"></div>
-        <button onclick="closeMenu()" class="mt-auto w-full py-5 bg-white text-black font-black rounded-3xl">儲存變更</button>
+        <button onclick="closeMenu()" class="mt-auto w-full py-5 bg-white text-black font-black rounded-3xl">確定返回</button>
     </div>
 
     <script>
-        // 1. 自動讀取 GitHub 現有檔案
+        // 更新為您的正確檔名 (.png)
         const THEME_FILES = ['skin-starry.png', 'skin-hakka.png', 'big_wave.png'];
-        let currentThemeIdx = 0;
+        let themeIdx = 0;
 
         let expr = '';
         let result = 0;
@@ -116,52 +123,44 @@
         let rates = {};
 
         const COUNTRY_DATA = {
-            "TWD": { name: "Taiwan", flag: "🇹🇼" },
-            "USD": { name: "United States", flag: "🇺🇸" },
-            "JPY": { name: "Japan", flag: "🇯🇵" },
-            "EUR": { name: "Euro Zone", flag: "🇪🇺" },
-            "CNY": { name: "China", flag: "🇨🇳" },
-            "HKD": { name: "Hong Kong", flag: "🇭🇰" },
+            "TWD": { name: "Taiwan", flag: "🇹🇼" }, "USD": { name: "United States", flag: "🇺🇸" },
+            "JPY": { name: "Japan", flag: "🇯🇵" }, "EUR": { name: "Euro Zone", flag: "🇪🇺" },
+            "CNY": { name: "China", flag: "🇨🇳" }, "HKD": { name: "Hong Kong", flag: "🇭🇰" },
             "KRW": { name: "South Korea", flag: "🇰🇷" }
         };
         let myFavs = ['TWD', 'JPY', 'USD', 'CNY', 'EUR'];
 
-        // --- Flip-board 模組函數 ---
+        // --- Flip-board 翻牌模組函數 ---
         function renderFlipValue(val) {
             const display = document.getElementById('val-display');
-            display.classList.add('val-animate');
+            display.classList.add('val-flip');
             
             setTimeout(() => {
                 display.textContent = Number(val.toFixed(2)).toLocaleString(undefined, {maximumFractionDigits: 2});
-                display.classList.remove('val-animate');
+                display.classList.remove('val-flip');
             }, 100);
         }
 
-        // --- 主題切換 ---
         function switchTheme() {
-            currentThemeIdx = (currentThemeIdx + 1) % THEME_FILES.length;
+            themeIdx = (themeIdx + 1) % THEME_FILES.length;
             applyTheme();
         }
 
         function applyTheme() {
             const shell = document.getElementById('shell');
-            const brand = document.getElementById('brand-name');
-            const fileName = THEME_FILES[currentThemeIdx];
-            const fullPath = `theme/${fileName}`;
+            const brand = document.getElementById('brand');
+            const path = `theme/${THEME_FILES[themeIdx]}`;
             
-            const testImg = new Image();
-            testImg.src = fullPath;
-            testImg.onload = () => {
-                shell.style.backgroundImage = `url('${fullPath}')`;
+            const img = new Image();
+            img.src = path;
+            img.onload = () => {
+                shell.style.backgroundImage = `url('${path}')`;
                 brand.textContent = "BAILIU CALC";
-                localStorage.setItem('saved-theme-idx', currentThemeIdx);
+                localStorage.setItem('saved-theme-idx', themeIdx);
             };
-            testImg.onerror = () => {
-                brand.textContent = `MISSING: ${fileName}`;
-            };
+            img.onerror = () => { brand.textContent = "SKIN MISSING: " + THEME_FILES[themeIdx]; };
         }
 
-        // --- 核心運算 ---
         async function initRates() {
             try {
                 const res = await fetch('https://open.er-api.com/v6/latest/TWD');
@@ -169,7 +168,7 @@
                 for(let [c, r] of Object.entries(data.rates)) rates[c] = 1/r;
                 rates['TWD'] = 1.0;
                 renderSelector();
-            } catch(e) { console.error("Rate fetch failed"); }
+            } catch(e) { console.error("Rate Error"); }
         }
 
         function renderSelector() {
@@ -180,8 +179,8 @@
                 tab.className = `country-tab ${code === activeCode ? 'active' : ''}`;
                 tab.textContent = code;
                 tab.onclick = () => {
-                    const twdAmount = result * (rates[activeCode] || 1);
-                    result = twdAmount / (rates[code] || 1);
+                    const twdVal = result * (rates[activeCode] || 1);
+                    result = twdVal / (rates[code] || 1);
                     expr = result.toFixed(2);
                     activeCode = code;
                     renderSelector();
@@ -197,23 +196,23 @@
             else if(k === '+/-') { result = -result; expr = String(result); }
             else { expr += k; }
             try { 
-                const evalResult = eval(expr.replace(/[^-()\d/*+.]/g,''));
-                if(isFinite(evalResult)) result = evalResult;
+                const res = eval(expr.replace(/[^-()\d/*+.]/g,''));
+                if(isFinite(res)) result = res;
             } catch(e) {}
             updateUI();
         }
 
         function solve() {
             try {
-                const evalResult = eval(expr.replace(/[^-()\d/*+.]/g,''));
-                if(isFinite(evalResult)) { result = evalResult; expr = result.toFixed(2); }
+                const res = eval(expr.replace(/[^-()\d/*+.]/g,''));
+                if(isFinite(res)) { result = res; expr = result.toFixed(2); }
             } catch(e) {}
             updateUI();
         }
 
         function updateUI() {
             document.getElementById('history').textContent = expr;
-            renderFlipValue(result); // 觸發翻牌動效
+            renderFlipValue(result);
             document.getElementById('flag-display').textContent = COUNTRY_DATA[activeCode]?.flag || '💰';
         }
 
@@ -222,15 +221,10 @@
             const list = document.getElementById('full-list');
             list.innerHTML = '';
             Object.keys(COUNTRY_DATA).forEach(code => {
-                const isPicked = myFavs.includes(code);
+                const picked = myFavs.includes(code);
                 const item = document.createElement('div');
-                item.className = `p-4 rounded-2xl flex justify-between items-center ${isPicked ? 'bg-white/20 text-white' : 'bg-white/5 text-white/30'}`;
-                item.innerHTML = `
-                    <div class="flex items-center gap-4">
-                        <span class="text-3xl">${COUNTRY_DATA[code].flag}</span>
-                        <span class="font-bold text-lg">${COUNTRY_DATA[code].name}</span>
-                    </div>
-                `;
+                item.className = `p-4 rounded-2xl flex justify-between items-center ${picked ? 'bg-white/20 text-white' : 'bg-white/5 text-white/30'}`;
+                item.innerHTML = `<div class="flex items-center gap-4"><span class="text-3xl">${COUNTRY_DATA[code].flag}</span><span class="font-bold text-lg">${COUNTRY_DATA[code].name}</span></div>`;
                 item.onclick = () => {
                     if(myFavs.includes(code)) { if(myFavs.length > 1) myFavs = myFavs.filter(c => c !== code); }
                     else { if(myFavs.length < 5) myFavs.push(code); }
@@ -244,7 +238,7 @@
 
         window.onload = () => {
             initRates();
-            currentThemeIdx = parseInt(localStorage.getItem('saved-theme-idx')) || 0;
+            themeIdx = parseInt(localStorage.getItem('saved-theme-idx')) || 0;
             applyTheme();
             updateUI();
         };
