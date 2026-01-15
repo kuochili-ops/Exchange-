@@ -3,43 +3,33 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>白六即時匯率計算機 - 路徑修正版</title>
+    <title>BAILIU CALC - 極透翻牌版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #111; font-family: 'Inter', sans-serif; overflow: hidden; }
+        body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #000; font-family: 'Inter', sans-serif; overflow: hidden; }
 
-        /* 背景容器：強制填滿 */
         .phone-shell {
-            width: 100vw;
-            max-width: 430px;
-            height: 100vh;
-            position: relative;
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            transition: background-image 0.5s ease-in-out;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 100vw; max-width: 430px; height: 100vh;
+            position: relative; background-size: cover; background-position: center;
+            transition: background-image 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; align-items: center; justify-content: center;
         }
 
         /* 99% 透明面板 */
         .calc-panel {
-            width: 92%;
-            height: 86%;
-            background: rgba(255, 255, 255, 0.01); 
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 3rem;
-            padding: 2.5rem 1.2rem;
-            display: flex;
-            flex-direction: column;
+            width: 92%; height: 86%; background: rgba(255, 255, 255, 0.01); 
+            backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 3rem;
+            padding: 2.5rem 1.2rem; display: flex; flex-direction: column;
             box-shadow: 0 40px 100px rgba(0,0,0,0.6);
         }
 
-        /* 三字母縮寫按鍵列 */
-        .country-selector { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 1.5rem; }
+        /* Flip-board 數字翻轉效果 */
+        .flip-container { display: flex; justify-content: flex-end; overflow: hidden; }
+        .flip-digit {
+            display: inline-block; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
         .country-tab {
             padding: 10px 0; font-size: 11px; font-weight: 800; color: white;
             background: rgba(255, 255, 255, 0.1); border-radius: 12px;
@@ -47,8 +37,6 @@
         }
         .country-tab.active { background: white; color: black; }
 
-        /* 60% 透明按鍵 */
-        .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; flex-grow: 1; }
         .btn {
             background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: 1.2rem; color: white; font-size: 1.4rem; font-weight: 700;
@@ -70,25 +58,27 @@
 </head>
 <body>
 
-    <div id="shell" class="phone-shell" style="background-image: url('theme/skin-starry.png');">
-        <button onclick="switchTheme()" class="theme-btn">🎨 風格切換</button>
+    <div id="shell" class="phone-shell">
+        <button onclick="switchTheme()" class="theme-btn">🎨 切換外皮</button>
 
         <div class="calc-panel">
-            <header class="mb-6">
-                <h1 id="title-tag" class="text-2xl font-black italic tracking-tighter text-white text-center opacity-60">BAILIU CALC</h1>
+            <header class="mb-6 text-center">
+                <h1 id="brand" class="text-2xl font-black italic tracking-tighter text-white opacity-60">BAILIU CALC</h1>
             </header>
 
-            <div class="text-right mb-6 px-1">
-                <div id="history" class="text-white/30 text-xs font-mono h-4 mb-1"></div>
+            <div class="mb-6 px-1">
+                <div id="history" class="text-right text-white/30 text-xs font-mono h-4 mb-1"></div>
                 <div class="flex justify-between items-center">
                     <span id="flag-display" class="text-4xl">🇹🇼</span>
-                    <span id="val" class="text-5xl font-black text-white font-mono tracking-tighter">0</span>
+                    <div id="val-container" class="flip-container text-5xl font-black text-white font-mono tracking-tighter">
+                        0
+                    </div>
                 </div>
             </div>
 
-            <div id="country-bar" class="country-selector"></div>
+            <div id="country-bar" class="grid grid-cols-5 gap-2 mb-6"></div>
 
-            <div class="calc-grid">
+            <div class="calc-grid grid grid-cols-4 gap-3 flex-grow">
                 <button onclick="press('C')" class="btn btn-clear">C</button>
                 <button onclick="press('⌫')" class="btn">⌫</button>
                 <button onclick="openMenu()" class="btn btn-func">⚙️</button>
@@ -115,17 +105,19 @@
 
     <div id="menu" class="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[100] hidden flex flex-col p-10">
         <h2 class="text-white text-2xl font-black mb-8 italic">幣別管理</h2>
-        <div id="full-list" class="grid grid-cols-1 gap-4 overflow-y-auto"></div>
+        <div id="full-list" class="grid grid-cols-1 gap-4 overflow-y-auto pr-2"></div>
         <button onclick="closeMenu()" class="mt-auto w-full py-5 bg-white text-black font-black rounded-3xl">確定</button>
     </div>
 
     <script>
+        // 1. 主題配置：只要檔名在清單內，不論 png 或 jpg 都會自動切換
+        const SKINS = ['skin-starry.png', 'skin-hakka.png', 'skin-modern.jpg']; 
+        let skinIdx = 0;
+
         let expr = '';
         let result = 0;
         let activeCode = 'TWD';
         let rates = {};
-        let currentSkin = 'starry';
-
         const COUNTRY_DATA = {
             "TWD": { name: "Taiwan", flag: "🇹🇼" },
             "USD": { name: "United States", flag: "🇺🇸" },
@@ -136,48 +128,56 @@
             "GBP": { name: "United Kingdom", flag: "🇬🇧" },
             "AUD": { name: "Australia", flag: "🇦🇺" },
             "KRW": { name: "South Korea", flag: "🇰🇷" },
-            "VND": { name: "Vietnam", flag: "🇻🇳" },
-            "THB": { name: "Thailand", flag: "🇹🇭" },
-            "SGD": { name: "Singapore", flag: "🇸🇬" }
+            "THB": { name: "Thailand", flag: "🇹🇭" }
         };
-        
         let myFavs = ['TWD', 'JPY', 'USD', 'CNY', 'EUR'];
 
-        // 核心切換邏輯
+        // --- Flip-board 模組 ---
+        function updateFlipValue(newVal) {
+            const container = document.getElementById('val-container');
+            const formatted = Number(newVal.toFixed(2)).toLocaleString(undefined, {maximumFractionDigits: 2});
+            
+            // 簡單翻轉動畫邏輯
+            container.style.opacity = "0";
+            container.style.transform = "translateY(10px)";
+            
+            setTimeout(() => {
+                container.textContent = formatted;
+                container.style.opacity = "1";
+                container.style.transform = "translateY(0)";
+            }, 100);
+        }
+
+        // --- 主題切換邏輯 ---
         function switchTheme() {
-            currentSkin = (currentSkin === 'starry') ? 'hakka' : 'starry';
+            skinIdx = (skinIdx + 1) % SKINS.length;
             applySkin();
         }
 
         function applySkin() {
             const shell = document.getElementById('shell');
-            const titleTag = document.getElementById('title-tag');
+            const brand = document.getElementById('brand');
+            const imgPath = `theme/${SKINS[skinIdx]}`;
             
-            // 使用相對路徑，去除 ./ 嘗試最直接的抓取
-            const imgPath = `theme/skin-${currentSkin}.png`;
-            
-            // 預載圖片檢查
             const img = new Image();
             img.src = imgPath;
             img.onload = () => {
                 shell.style.backgroundImage = `url('${imgPath}')`;
-                titleTag.textContent = "BAILIU CALC"; // 加載成功恢復標題
-                localStorage.setItem('calc-skin-png-v4', currentSkin);
+                brand.textContent = "BAILIU CALC";
+                localStorage.setItem('calc-skin-idx', skinIdx);
             };
             img.onerror = () => {
-                titleTag.textContent = "IMG ERROR: CHECK PATH"; // 加載失敗顯示提示
-                console.error("無法載入圖片:", imgPath);
+                brand.textContent = "SKIN MISSING: " + SKINS[skinIdx];
             };
         }
 
+        // --- 核心運算 ---
         async function initRates() {
-            try {
-                const res = await fetch('https://open.er-api.com/v6/latest/TWD');
-                const data = await res.json();
-                for(let [c, r] of Object.entries(data.rates)) rates[c] = 1/r;
-                rates['TWD'] = 1.0;
-                renderSelector();
-            } catch(e) { console.error("Rate Fetch Fail"); }
+            const res = await fetch('https://open.er-api.com/v6/latest/TWD');
+            const data = await res.json();
+            for(let [c, r] of Object.entries(data.rates)) rates[c] = 1/r;
+            rates['TWD'] = 1.0;
+            renderSelector();
         }
 
         function renderSelector() {
@@ -221,7 +221,7 @@
 
         function updateUI() {
             document.getElementById('history').textContent = expr;
-            document.getElementById('val').textContent = Number(result.toFixed(2)).toLocaleString(undefined, {maximumFractionDigits: 2});
+            updateFlipValue(result); // 使用翻牌效果更新
             document.getElementById('flag-display').textContent = COUNTRY_DATA[activeCode]?.flag || '💰';
         }
 
@@ -233,33 +233,21 @@
                 const picked = myFavs.includes(code);
                 const item = document.createElement('div');
                 item.className = `p-4 rounded-2xl flex justify-between items-center ${picked ? 'bg-white/20 text-white' : 'bg-white/5 text-white/30'}`;
-                item.innerHTML = `
-                    <div class="flex items-center gap-4">
-                        <span class="text-3xl">${COUNTRY_DATA[code].flag}</span>
-                        <span class="font-bold text-lg">${COUNTRY_DATA[code].name}</span>
-                    </div>
-                    <span class="text-xs opacity-50 font-mono">${code}</span>
-                `;
+                item.innerHTML = `<div class="flex items-center gap-4"><span class="text-3xl">${COUNTRY_DATA[code].flag}</span><span class="font-bold text-lg">${COUNTRY_DATA[code].name}</span></div>`;
                 item.onclick = () => {
-                    if(myFavs.includes(code)) {
-                        if(myFavs.length > 1) myFavs = myFavs.filter(c => c !== code);
-                    } else {
-                        if(myFavs.length < 5) myFavs.push(code);
-                    }
+                    if(myFavs.includes(code)) { if(myFavs.length > 1) myFavs = myFavs.filter(c => c !== code); }
+                    else { if(myFavs.length < 5) myFavs.push(code); }
                     openMenu();
                 };
                 list.appendChild(item);
             });
         }
 
-        function closeMenu() {
-            document.getElementById('menu').classList.add('hidden');
-            renderSelector();
-        }
+        function closeMenu() { document.getElementById('menu').classList.add('hidden'); renderSelector(); }
 
         window.onload = () => {
             initRates();
-            currentSkin = localStorage.getItem('calc-skin-png-v4') || 'starry';
+            skinIdx = parseInt(localStorage.getItem('calc-skin-idx')) || 0;
             applySkin();
             updateUI();
         };
