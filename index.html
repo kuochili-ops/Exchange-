@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>BAILIU CALC - 極致透明版</title>
+    <title>BAILIU CALC - 紅邊字元極透版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #000; font-family: 'Inter', sans-serif; overflow: hidden; }
@@ -15,43 +15,47 @@
             display: flex; align-items: center; justify-content: center;
         }
 
-        /* --- 透明度優化設定 --- */
+        /* 極致透明面板 */
         .calc-panel {
             width: 92%; height: 88%; 
-            /* 1. 背景設為完全透明 */
-            background: rgba(255, 255, 255, 0.02); 
-            /* 2. 降低模糊度 (從 25px 改為 10px) 並增加飽和度 */
+            background: rgba(255, 255, 255, 0.01); 
             backdrop-filter: blur(10px) saturate(160%); 
             -webkit-backdrop-filter: blur(10px) saturate(160%);
-            /* 3. 極細邊框增加高級感 */
-            border: 1px solid rgba(255, 255, 255, 0.15); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
             border-radius: 3.5rem;
             padding: 2.5rem 1.2rem; display: flex; flex-direction: column;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
-        /* Flip-board 模組核心 CSS */
+        /* --- 按鍵字元加紅框/紅邊設計 --- */
+        .btn-text {
+            color: white;
+            font-size: 1.6rem;
+            font-weight: 900;
+            /* 使用紅邊描繪字元輪廓 */
+            -webkit-text-stroke: 1.5px #ff0000; 
+            /* 如果想要更像「框」感，可以增加一點文字陰影 */
+            text-shadow: 0 0 2px #ff0000;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.1); 
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1.5rem; 
+            display: flex; align-items: center; justify-content: center; 
+            transition: 0.1s;
+        }
+        .btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.2); }
+
+        /* Flip-board 翻牌動效 */
         #val-display { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        .val-flip { transform: scale(1.1) translateY(-5px); opacity: 0; filter: blur(4px); }
+        .val-flip { transform: translateY(-10px); opacity: 0; filter: blur(2px); }
 
         .country-tab {
             padding: 10px 0; font-size: 11px; font-weight: 800; color: white;
             background: rgba(255, 255, 255, 0.1); border-radius: 12px;
             text-align: center; cursor: pointer; transition: 0.2s;
         }
-        .country-tab.active { background: white; color: black; box-shadow: 0 4px 15px rgba(255,255,255,0.3); }
-
-        /* 按鍵也要透明 */
-        .btn {
-            background: rgba(255, 255, 255, 0.15); 
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 1.5rem; color: white; font-size: 1.4rem; font-weight: 700;
-            display: flex; align-items: center; justify-content: center; transition: 0.1s;
-        }
-        .btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.3); }
-        .btn-op { background: rgba(245, 158, 11, 0.3); } 
-        .btn-func { background: rgba(99, 102, 241, 0.3); } 
-        .btn-clear { background: rgba(239, 68, 68, 0.3); } 
+        .country-tab.active { background: white; color: black; }
 
         .theme-btn {
             position: absolute; top: 50px; right: 30px;
@@ -82,26 +86,30 @@
             <div id="country-bar" class="grid grid-cols-5 gap-2 mb-6"></div>
 
             <div class="calc-grid grid grid-cols-4 gap-3 flex-grow">
-                <button onclick="press('C')" class="btn btn-clear">C</button>
-                <button onclick="press('⌫')" class="btn">⌫</button>
-                <button onclick="openMenu()" class="btn btn-func">⚙️</button>
-                <button onclick="press('/')" class="btn btn-op">÷</button>
-                <button onclick="press('7')" class="btn">7</button>
-                <button onclick="press('8')" class="btn">8</button>
-                <button onclick="press('9')" class="btn">9</button>
-                <button onclick="press('*')" class="btn btn-op">×</button>
-                <button onclick="press('4')" class="btn">4</button>
-                <button onclick="press('5')" class="btn">5</button>
-                <button onclick="press('6')" class="btn">6</button>
-                <button onclick="press('-')" class="btn btn-op">-</button>
-                <button onclick="press('1')" class="btn">1</button>
-                <button onclick="press('2')" class="btn">2</button>
-                <button onclick="press('3')" class="btn">3</button>
-                <button onclick="press('+')" class="btn btn-op">+</button>
-                <button onclick="press('0')" class="btn">0</button>
-                <button onclick="press('.')" class="btn">.</button>
-                <button onclick="press('+/-')" class="btn">±</button>
-                <button onclick="solve()" class="btn bg-emerald-500/40">=</button>
+                <button onclick="press('C')" class="btn"><span class="btn-text" style="-webkit-text-stroke-color: #ff3b3b;">C</span></button>
+                <button onclick="press('⌫')" class="btn"><span class="btn-text">⌫</span></button>
+                <button onclick="openMenu()" class="btn"><span class="btn-text">⚙️</span></button>
+                <button onclick="press('/')" class="btn"><span class="btn-text">÷</span></button>
+                
+                <button onclick="press('7')" class="btn"><span class="btn-text">7</span></button>
+                <button onclick="press('8')" class="btn"><span class="btn-text">8</span></button>
+                <button onclick="press('9')" class="btn"><span class="btn-text">9</span></button>
+                <button onclick="press('*')" class="btn"><span class="btn-text">×</span></button>
+                
+                <button onclick="press('4')" class="btn"><span class="btn-text">4</span></button>
+                <button onclick="press('5')" class="btn"><span class="btn-text">5</span></button>
+                <button onclick="press('6')" class="btn"><span class="btn-text">6</span></button>
+                <button onclick="press('-')" class="btn"><span class="btn-text">-</span></button>
+                
+                <button onclick="press('1')" class="btn"><span class="btn-text">1</span></button>
+                <button onclick="press('2')" class="btn"><span class="btn-text">2</span></button>
+                <button onclick="press('3')" class="btn"><span class="btn-text">3</span></button>
+                <button onclick="press('+')" class="btn"><span class="btn-text">+</span></button>
+                
+                <button onclick="press('0')" class="btn"><span class="btn-text">0</span></button>
+                <button onclick="press('.')" class="btn"><span class="btn-text">.</span></button>
+                <button onclick="press('+/-')" class="btn"><span class="btn-text">±</span></button>
+                <button onclick="solve()" class="btn bg-emerald-500/20"><span class="btn-text" style="-webkit-text-stroke-color: #10b981;">=</span></button>
             </div>
         </div>
     </div>
@@ -113,7 +121,7 @@
     </div>
 
     <script>
-        // 更新為您的正確檔名 (.png)
+        // 配合您的 GitHub 路徑
         const THEME_FILES = ['skin-starry.png', 'skin-hakka.png', 'big_wave.png'];
         let themeIdx = 0;
 
@@ -130,11 +138,10 @@
         };
         let myFavs = ['TWD', 'JPY', 'USD', 'CNY', 'EUR'];
 
-        // --- Flip-board 翻牌模組函數 ---
+        // --- Flip-board 翻牌模組 ---
         function renderFlipValue(val) {
             const display = document.getElementById('val-display');
             display.classList.add('val-flip');
-            
             setTimeout(() => {
                 display.textContent = Number(val.toFixed(2)).toLocaleString(undefined, {maximumFractionDigits: 2});
                 display.classList.remove('val-flip');
@@ -148,17 +155,13 @@
 
         function applyTheme() {
             const shell = document.getElementById('shell');
-            const brand = document.getElementById('brand');
             const path = `theme/${THEME_FILES[themeIdx]}`;
-            
             const img = new Image();
             img.src = path;
             img.onload = () => {
                 shell.style.backgroundImage = `url('${path}')`;
-                brand.textContent = "BAILIU CALC";
                 localStorage.setItem('saved-theme-idx', themeIdx);
             };
-            img.onerror = () => { brand.textContent = "SKIN MISSING: " + THEME_FILES[themeIdx]; };
         }
 
         async function initRates() {
@@ -168,7 +171,7 @@
                 for(let [c, r] of Object.entries(data.rates)) rates[c] = 1/r;
                 rates['TWD'] = 1.0;
                 renderSelector();
-            } catch(e) { console.error("Rate Error"); }
+            } catch(e) {}
         }
 
         function renderSelector() {
