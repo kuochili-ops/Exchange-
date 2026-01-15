@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>白六即時匯率計算機</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; -webkit-text-size-adjust:100%; margin:0; }
+        .calc-button { padding:1rem 0.5rem; font-size:16px; font-weight:700; transition:transform .08s; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; user-select:none; border:none; }
+        .calc-button:active { transform:scale(.98); }
+        .calculator-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+        .currency-selector-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+        .modal-currency-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:start; }
+        .currency-modal-inner { max-height:56vh; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-right:6px; }
+        #display-expression { font-size:.9rem; color:#6b7280; }
+        #display-value { font-size:2.5rem; font-weight:800; }
+        #display-currency-flag { font-size:1.125rem; color:#4b5563; }
+        @media (max-width:420px) {
+            .calc-button { padding:.8rem .4rem; font-size:16px; }
+            #display-value { font-size:2rem; }
+            .currency-selector-grid { gap:6px; grid-template-columns:repeat(5,minmax(0,1fr)); }
+            .modal-currency-grid { gap:8px; }
+        }
+        .btn-rounded { border-radius:.5rem; }
+        .shadow-sm { box-shadow:0 1px 2px rgba(0,0,0,.06); }
+        .animate-pulse { animation:pulse 1.5s infinite; }
+        @keyframes pulse { 0%{opacity:1}50%{opacity:.6}100%{opacity:1} }
+        .locked { background:linear-gradient(90deg,#ecfdf5,#d1fae5); border:2px solid #10b981; color:#065f46; cursor:default; }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex items-center justify-center">
+
+  <div id="app" class="w-full max-w-sm bg-white shadow-2xl rounded-xl p-5 md:p-6">
+    <header class="mb-4 text-center">
+      <h1 class="text-2xl font-bold text-gray-800">𓃥白六即時匯率計算機</h1>
+      <p id="update-status" class="text-xs text-gray-500 mt-1">匯率資料: 載入中...</p>
+    </header>
+
+    <div class="bg-gray-100 p-4 rounded-lg mb-6 shadow-inner">
+      <div id="display-expression" class="text-right h-6 overflow-hidden whitespace-nowrap mb-1"></div>
+      <div class="flex justify-between items-end">
+        <div id="display-currency-flag" class="mr-2"></div>
+        <div id="display-value" class="text-gray-900 text-right overflow-hidden whitespace-nowrap font-mono">0</div>
+      </div>
+    </div>
+
+    <div id="currency-selectors" class="currency-selector-grid mb-6"></div>
+
+    <div class="calculator-grid">
+      <button onclick="handleMemory('clear')" class="calc-button btn-rounded bg-gray-200 text-gray-700 shadow-sm">MC</button>
+      <button onclick="handleMemory('recall')" class="calc-button btn-rounded bg-gray-200 text-gray-700 shadow-sm">MR</button>
+      <button onclick="handleMemory('add')" class="calc-button btn-rounded bg-gray-200 text-gray-700 shadow-sm">M+</button>
+      <button onclick="handleMemory('subtract')" class="calc-button btn-rounded bg-gray-200 text-gray-700 shadow-sm">M-</button>
+
+      <button onclick="handleInput('C')" class="calc-button btn-rounded bg-red-500 text-white shadow-sm">C</button>
+      <button onclick="handleInput('⌫')" class="calc-button btn-rounded bg-gray-300 text-gray-800 shadow-sm">⌫</button>
+      <button onclick="toggleModal()" class="calc-button btn-rounded bg-indigo-600 text-white shadow-sm">⚙️</button>
+      <button onclick="handleInput('/')" class="calc-button btn-rounded bg-yellow-500 text-white shadow-sm">÷</button>
+
+      <button onclick="handleInput('7')" class="calc-button btn-rounded bg-gray-50 text-gray-900 shadow-sm">7</button>
+      <button onclick="handleInput('8')" class="calc-button btn-rounded bg-gray-50 text-gray-900 shadow-sm">8</button>
+      <button onclick="handleInput('9')" class="calc-button btn-rounded bg-gray-50 text-gray-900 shadow-sm">9</button>
+      <button onclick="handleInput('*')" class="calc-button btn-rounded bg-yellow-500 text-white shadow-sm">×</button>
+
+      <button onclick="handleInput('4')" class="calc-button btn-rounded bg-gray-50 text-gray-900 shadow-sm">4</button>
+      <button onclick="handleInput('5')" class="calc-button btn-rounded bg-gray-50 text-gray-900 shadow-sm">5</button>
+      <button onclick="handleInput('6')" class="calc-button btn-rounded bg-gray-50 text-gray-900 shadow-sm">6</button>
+      <button onclick="handleInput('-')" class="calc-button btn-rounded bg-yellow-500 text-white shadow-sm">－</button>
+
+      <button onclick="handleInput('1')" class="calc-button btn-rounded bg-gray-50 text-gray-900 shadow-sm">1</button>
+      <button onclick="handleInput('2')" class="calc-button btn-rounded bg-gray-50 text-gray-900 shadow-sm">2</button>
+      <button onclick="handleInput('3')" class="calc-button btn-rounded bg-gray-50 text-gray-900 shadow-sm">3</button>
+      <button onclick="handleInput('+')" class="calc-button btn-rounded bg-yellow-500 text-white shadow-sm">＋</button>
+
+      <button onclick="handleInput('0')" class="calc-button btn-rounded bg-gray-50 text-gray-900 shadow-sm">0</button>
+      <button onclick="handleInput('.')" class="calc-button btn-rounded bg-gray-50 text-gray-900 shadow-sm">.</button>
+      <button onclick="handleInput('+/-')" class="calc-button btn-rounded bg-gray-300 text-gray-800 shadow-sm">±</button>
+      <button onclick="calculate()" class="calc-button btn-rounded bg-green-500 text-white shadow-sm">=</button>
+    </div>
+  </div>
+
+  <div id="currency-modal" class="fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl p-6 relative">
+      <h2 class="text-2xl font-bold mb-4 text-gray-800">選擇並替換常用貨幣</h2>
+      <p id="modal-info" class="text-sm text-gray-600 mb-4">
+        <span class="font-bold text-red-600">步驟 1:</span> 點擊您想替換的常用貨幣 (藍色標記，TWD 無法替換)。
+        <span class="font-bold text-red-600">步驟 2:</span> 點擊一個新的貨幣進行替換。
+      </p>
+
+      <div class="currency-modal-inner">
+        <div id="modal-currency-list" class="modal-currency-grid"></div>
+      </div>
+
+      <button onclick="closeModal()" class="mt-6 w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150">
+        完成 / 返回計算機
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // 全局狀態
+    let expression = '';
+    let lastValue = 0;
+    let currentCurrency = 'TWD';
+    let exchangeRates = {};
+    let memoryValue = 0;
+    let currencyToReplace = null;
+
+    // 幣別旗幟
+    const FLAGS = {
+      "TWD":"🇹🇼 TWD","USD":"🇺🇸 USD","JPY":"🇯🇵 JPY","EUR":"🇪🇺 EUR","CNY":"🇨🇳 CNY",
+      "HKD":"🇭🇰 HKD","GBP":"🇬🇧 GBP","AUD":"🇦🇺 AUD","SGD":"🇸🇬 SGD","KRW":"🇰🇷 KRW",
+      "CAD":"🇨🇦 CAD","CHF":"🇨🇭 CHF","ZAR":"🇿🇦 ZAR","SEK":"🇸🇪 SEK","NZD":"🇳🇿 NZD",
+      "THB":"🇹🇭 THB","PHP":"🇵🇭 PHP","IDR":"🇮🇩 IDR","MYR":"🇲🇾 MYR","INR":"🇮🇳 INR",
+      "BRL":"🇧🇷 BRL","RUB":"🇷🇺 RUB","MXN":"🇲🇽 MXN","PLN":"🇵🇱 PLN","SAR":"🇸🇦 SAR",
+      "AED":"🇦🇪 AED","VND":"🇻🇳 VND","ILS":"🇮🇱 ILS","CLP":"🇨🇱 CLP","DKK":"🇩🇰 DKK","NOK":"🇳🇴 NOK"
+    };
+    const ALL_CURRENCY_CODES = Object.keys(FLAGS);
+
+    // **固定預設順序（台灣鎖定不可替換）**
+    let DEFAULT_CURRENCIES = ['TWD','JPY','USD','EUR','CNY'];
+
+    const FALLBACK_RATES_API_FORMAT = {
+      "TWD":1,"USD":0.0307,"JPY":4.80,"EUR":0.0285,"CNY":0.22,"HKD":0.24,"GBP":0.024,"AUD":0.046,"SGD":0.042,"KRW":39.5,
+      "CAD":0.041,"CHF":0.027,"ZAR":0.55,"SEK":0.35,"NZD":0.05,"THB":1.10,"PHP":1.70,"IDR":515.0,"MYR":0.14,"INR":2.50,
+      "BRL":0.16,"RUB":2.65,"MXN":0.53,"PLN":0.13,"SAR":0.11,"AED":0.11,"VND":790.0,"ILS":0.11,"CLP":29.0,"DKK":0.20,"NOK":0.28
+    };
+
+    const displayExpr = document.getElementById('display-expression');
+    const displayValue = document.getElementById('display-value');
+    const displayFlag = document.getElementById('display-currency-flag');
+    const updateStatus = document.getElementById('update-status');
+    const currencySelectors = document.getElementById('currency-selectors');
+    const currencyModal = document.getElementById('currency-modal');
+    const modalCurrencyList = document.getElementById('modal-currency-list');
+
+    async function fetchRates(){
+      const API_URL = 'https://open.er-api.com/v6/latest/TWD';
+      updateStatus.textContent = '匯率資料: 連線中...';
+      let ratesFromAPI = null;
+      try{
+        const MAX_RETRIES = 3;
+        let response = null;
+        for(let i=0;i<MAX_RETRIES;i++){
+          const res = await fetch(API_URL);
+          if(res.ok){ response = res; break; }
+          if(i<MAX_RETRIES-1) await new Promise(r=>setTimeout(r, Math.pow(2,i)*1000));
+        }
+        if(!response || !response.ok) throw new Error(`API 請求失敗，狀態碼: ${response?response.status:'未知'}`);
+        const data = await response.json();
+        if(!data || !data.rates) throw new Error('API 回傳格式錯誤或服務失敗');
+        ratesFromAPI = data.rates;
+        updateStatus.textContent = `匯率資料: 已更新 (${new Date().toLocaleTimeString('zh-TW')})`;
+      }catch(e){
+        console.error('Fetch Rates Error:', e);
+        ratesFromAPI = FALLBACK_RATES_API_FORMAT;
+        updateStatus.textContent = '匯率資料: 網路獲取失敗，使用備用數據';
+      }
+
+      // 轉換：1 TWD = X target -> 1 target = Y TWD
+      const convertedRates = {"TWD":1.0};
+      for(const [code,rate] of Object.entries(ratesFromAPI)){
+        if(typeof rate === 'number' && rate > 0) convertedRates[code] = 1 / rate;
+      }
+
+      // **只在 DEFAULT_CURRENCIES 少於 5 且 API 有 DKK/NOK 時加入，不會取代既有預設**
+      const extras = ['DKK','NOK'];
+      for(const ex of extras){
+        if(convertedRates[ex] && !DEFAULT_CURRENCIES.includes(ex) && DEFAULT_CURRENCIES.length < 5){
+          DEFAULT_CURRENCIES.push(ex);
+        }
+      }
+
+      exchangeRates = convertedRates;
+
+      // 確保 DEFAULT_CURRENCIES 每個都有匯率（若沒有則 fallback 或 TWD）
+      DEFAULT_CURRENCIES = DEFAULT_CURRENCIES.map(c=>{
+        if(!exchangeRates[c]){
+          if(FALLBACK_RATES_API_FORMAT[c]) return c;
+          return 'TWD';
+        }
+        return c;
+      }).slice(0,5);
+
+      renderCurrencySelectors();
+      updateDisplay();
+    }
+
+    function formatNumber(num){
+      if(isNaN(num)||num===null) return '0';
+      let s = Number(num).toFixed(8).replace(/\.?0+$/,'');
+      let parts = s.split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      return parts.join('.');
+    }
+
+    function renderCurrencySelectors(){
+      currencySelectors.innerHTML = '';
+      DEFAULT_CURRENCIES.forEach((code, idx)=>{
+        const isActive = code === currentCurrency;
+        const button = document.createElement('button');
+        button.textContent = code;
+        button.setAttribute('data-currency', code);
+        if(code === 'TWD'){
+          button.className = `p-2 rounded-lg font-semibold text-sm locked`;
+          button.onclick = ()=> changeCurrency(code);
+        } else {
+          button.className = `p-2 rounded-lg font-semibold text-sm shadow-sm transition duration-150 ${isActive ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700'}`;
+          button.onclick = ()=> changeCurrency(code);
+        }
+        currencySelectors.appendChild(button);
+      });
+    }
+
+    function renderModalCurrencies(){
+      modalCurrencyList.innerHTML = '';
+      ALL_CURRENCY_CODES.forEach(code=>{
+        const isSelected = DEFAULT_CURRENCIES.includes(code);
+        const isToReplace = currencyToReplace === code;
+        const isTWD = code === 'TWD';
+        let baseClasses = 'p-3 rounded-lg font-semibold text-center cursor-pointer transition duration-150 shadow-sm';
+        let stateClass = 'bg-gray-100 hover:bg-gray-200 text-gray-800';
+        let statusText = '';
+        let statusClass = 'text-gray-400';
+        if(isSelected){
+          stateClass = isTWD ? 'bg-green-100 border-2 border-green-500 text-green-700 locked' : 'bg-indigo-100 border-2 border-indigo-500 text-indigo-700';
+          statusText = isTWD ? '(鎖定)' : '(已選)';
+        }
+        if(isToReplace){
+          stateClass = 'bg-red-500 border-2 border-red-700 text-white animate-pulse';
+          statusText = '(待替換)';
+          statusClass = 'text-white';
+        }
+        const button = document.createElement('div');
+        button.className = `${baseClasses} ${stateClass}`;
+        button.setAttribute('data-currency', code);
+        button.innerHTML = `<div class="text-lg">${FLAGS[code] ? FLAGS[code].split(' ')[0] : code}</div><div class="text-sm ${statusClass}">${code} ${statusText}</div>`;
+        if(isTWD){
+          button.onclick = ()=> toast('TWD 為鎖定幣別，無法被替換');
+        } else {
+          button.onclick = ()=> handleModalSelection(code);
+        }
+        modalCurrencyList.appendChild(button);
+      });
+    }
+
+    function handleModalSelection(code){
+      const isSelected = DEFAULT_CURRENCIES.includes(code);
+      const isTWD = code === 'TWD';
+      if(isTWD){ toast('TWD 為鎖定幣別，無法被替換'); return; }
+
+      if(currencyToReplace){
+        if(DEFAULT_CURRENCIES.includes(code)){
+          currencyToReplace = null;
+          renderModalCurrencies();
+          return;
+        }
+        const indexToReplace = DEFAULT_CURRENCIES.indexOf(currencyToReplace);
+        if(indexToReplace !== -1 && DEFAULT_CURRENCIES[indexToReplace] !== 'TWD'){
+          DEFAULT_CURRENCIES[indexToReplace] = code;
+          currencyToReplace = null;
+          toast(`已將替換為 ${FLAGS[code] ? FLAGS[code].split(' ')[0] + ' ' + code : code}`);
+        } else {
+          toast('無法替換 TWD，請選擇其他常用貨幣進行替換');
+        }
+      } else if(isSelected && !isTWD){
+        currencyToReplace = code;
+        toast(`選擇要替換的貨幣：${code}，接著點選新貨幣`);
+      } else if(!isSelected && !currencyToReplace){
+        toast('請先點擊一個要替換的常用貨幣 (藍色標記)');
+      }
+      renderModalCurrencies();
+      renderCurrencySelectors();
+    }
+
+    function toggleModal(){ if(currencyModal.classList.contains('hidden')) openModal(); else closeModal(); }
+    function openModal(){ currencyModal.classList.remove('hidden'); currencyToReplace = null; renderModalCurrencies(); }
+    function closeModal(){ currencyModal.classList.add('hidden'); currencyToReplace = null; renderCurrencySelectors(); }
+
+    function updateDisplay(){
+      displayExpr.textContent = expression || '';
+      let displayedValue = lastValue;
+      if(String(lastValue).length>15 && !String(lastValue).includes('.')) displayedValue = lastValue.toPrecision(10);
+      displayValue.textContent = formatNumber(displayedValue);
+      displayFlag.textContent = FLAGS[currentCurrency] || currentCurrency;
+    }
+
+    function handleInput(input){
+      if(input==='C'){ expression=''; lastValue=0; }
+      else if(input==='⌫') expression = expression.slice(0,-1);
+      else if(input==='+/-'){ try{ const val = evaluateExpression(expression); if(val!==null && !isNaN(val)){ expression = String(-val); lastValue = -val; } }catch{} }
+      else {
+        const lastChar = expression.slice(-1);
+        const operators = ['+','*','/'];
+        const isOperator = operators.includes(lastChar);
+        const isNewOperator = operators.includes(input);
+        if(isOperator && isNewOperator && input!=='-') expression = expression.slice(0,-1) + input;
+        else expression += input;
+      }
+      calculate(false);
+      updateDisplay();
+    }
+
+    function calculate(updateExpression=true){
+      if(!expression) return;
+      try{
+        const result = evaluateExpression(expression);
+        if(result!==null && !isNaN(result) && isFinite(result)){
+          lastValue = result;
+          if(updateExpression) expression = String(result);
+        } else if(isFinite(result)===false){
+          toast('錯誤: 除以零');
+        }
+      }catch{}
+    }
+
+    function handleMemory(action){
+      calculate(true);
+      const currentTWD = lastValue * (exchangeRates[currentCurrency] || 1);
+      if(action==='clear'){ memoryValue = 0; toast('記憶已清除'); }
+      else if(action==='recall'){ const recalledValue = memoryValue / (exchangeRates[currentCurrency] || 1); lastValue = recalledValue; expression = String(recalledValue); toast('已回憶數值'); }
+      else if(action==='add'){ memoryValue += currentTWD; toast('已加入記憶'); }
+      else if(action==='subtract'){ memoryValue -= currentTWD; toast('已從記憶扣除'); }
+      updateDisplay();
+    }
+
+    function changeCurrency(newCurrency){
+      if(newCurrency === currentCurrency) return;
+      calculate(true);
+      const prevCurrency = currentCurrency;
+      const prevRate = exchangeRates[prevCurrency] || 1;
+      const newRate = exchangeRates[newCurrency] || 1;
+      if(lastValue !== 0 && prevRate !== 0 && newRate !== 0){
+        const valueInTWD = lastValue * prevRate;
+        const newValue = valueInTWD / newRate;
+        lastValue = newValue; expression = String(newValue);
+      }
+      currentCurrency = newCurrency;
+      renderCurrencySelectors();
+      updateDisplay();
+    }
+
+    function evaluateExpression(expr){
+      if(!expr) return 0;
+      const cleanExpr = expr.replace(/[^-()\d/*+.]/g,'');
+      try{ return new Function('return ' + cleanExpr)(); } catch(e){ return null; }
+    }
+
+    function toast(message){
+      const alertBox = document.createElement('div');
+      alertBox.className = "fixed top-4 right-4 bg-indigo-600 text-white p-3 rounded-lg shadow-xl z-50 transition-opacity duration-300 opacity-100";
+      alertBox.textContent = message;
+      document.body.appendChild(alertBox);
+      setTimeout(()=>{ alertBox.style.opacity='0'; setTimeout(()=>alertBox.remove(),300); },1800);
+    }
+
+    window.onload = function(){ fetchRates(); };
+  </script>
+</body>
+</html>
