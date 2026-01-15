@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>白六即時匯率計算機 - 99% 極透版</title>
+    <title>白六即時匯率計算機 - 99% 極透藝術版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #000; font-family: 'Inter', sans-serif; overflow: hidden; }
@@ -27,8 +27,8 @@
             width: 90%;
             height: 85%;
             background: rgba(255, 255, 255, 0.01); 
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 3rem;
             padding: 2.5rem 1.5rem;
@@ -44,7 +44,7 @@
             padding: 0 0.5rem;
         }
 
-        /* 三字母幣別列 */
+        /* 三字母幣別快速切換列 */
         .country-selector {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
@@ -151,7 +151,7 @@
 
     <div id="menu" class="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[200] hidden flex flex-col p-10">
         <h2 class="text-white text-2xl font-black mb-8 italic">幣別管理</h2>
-        <div id="full-list" class="grid grid-cols-2 gap-4 overflow-y-auto"></div>
+        <div id="full-list" class="grid grid-cols-1 gap-3 overflow-y-auto pr-2"></div>
         <button onclick="closeMenu()" class="mt-auto w-full py-5 bg-white text-black font-black rounded-3xl">儲存並關閉</button>
     </div>
 
@@ -162,11 +162,19 @@
         let rates = {};
         let currentSkin = 'starry';
 
-        const FLAGS = {
-            "TWD": "🇹🇼", "USD": "🇺🇸", "JPY": "🇯🇵", 
-            "EUR": "🇪🇺", "CNY": "🇨🇳", "HKD": "🇭🇰", 
-            "GBP": "🇬🇧", "AUD": "🇦🇺", "KRW": "🇰🇷", 
-            "VND": "🇻🇳", "THB": "🇹🇭", "SGD": "🇸🇬"
+        const COUNTRY_DATA = {
+            "TWD": { name: "Taiwan", flag: "🇹🇼" },
+            "USD": { name: "United States", flag: "🇺🇸" },
+            "JPY": { name: "Japan", flag: "🇯🇵" },
+            "EUR": { name: "Euro Zone", flag: "🇪🇺" },
+            "CNY": { name: "China", flag: "🇨🇳" },
+            "HKD": { name: "Hong Kong", flag: "🇭🇰" },
+            "GBP": { name: "United Kingdom", flag: "🇬🇧" },
+            "AUD": { name: "Australia", flag: "🇦🇺" },
+            "KRW": { name: "South Korea", flag: "🇰🇷" },
+            "VND": { name: "Vietnam", flag: "🇻🇳" },
+            "THB": { name: "Thailand", flag: "🇹🇭" },
+            "SGD": { name: "Singapore", flag: "🇸🇬" }
         };
         
         let myFavs = ['TWD', 'JPY', 'USD', 'CNY', 'EUR'];
@@ -174,16 +182,18 @@
         function switchTheme() {
             currentSkin = (currentSkin === 'starry') ? 'hakka' : 'starry';
             const shell = document.getElementById('shell');
-            shell.style.backgroundImage = `url('./skin-${currentSkin}.png')`;
+            shell.style.backgroundImage = `url('./skin-${currentSkin}.jpg')`;
             localStorage.setItem('calc-skin', currentSkin);
         }
 
         async function initRates() {
-            const res = await fetch('https://open.er-api.com/v6/latest/TWD');
-            const data = await res.json();
-            for(let [c, r] of Object.entries(data.rates)) rates[c] = 1/r;
-            rates['TWD'] = 1.0;
-            renderSelector();
+            try {
+                const res = await fetch('https://open.er-api.com/v6/latest/TWD');
+                const data = await res.json();
+                for(let [c, r] of Object.entries(data.rates)) rates[c] = 1/r;
+                rates['TWD'] = 1.0;
+                renderSelector();
+            } catch(e) { console.error("Rate fetch failed"); }
         }
 
         function renderSelector() {
@@ -192,11 +202,11 @@
             myFavs.forEach(code => {
                 const tab = document.createElement('div');
                 tab.className = `country-tab ${code === activeCode ? 'active' : ''}`;
-                tab.textContent = code;
+                tab.textContent = code; // 主畫面顯示縮寫
                 tab.onclick = () => {
                     const twdVal = result * (rates[activeCode] || 1);
                     result = twdVal / (rates[code] || 1);
-                    expr = String(result);
+                    expr = result.toFixed(2);
                     activeCode = code;
                     renderSelector();
                     updateUI();
@@ -221,28 +231,35 @@
         function solve() {
             try {
                 const res = eval(expr.replace(/[^-()\d/*+.]/g,''));
-                if(isFinite(res)) { result = res; expr = String(res); }
+                if(isFinite(res)) { result = res; expr = result.toFixed(2); }
             } catch(e) {}
             updateUI();
         }
 
         function updateUI() {
             document.getElementById('history').textContent = expr;
-            // 格式化：最多顯示到小數點後兩位
+            // 限制小數點後兩位
             document.getElementById('val').textContent = Number(result.toFixed(2)).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
-            document.getElementById('flag-display').textContent = FLAGS[activeCode] || '💰';
+            document.getElementById('flag-display').textContent = COUNTRY_DATA[activeCode]?.flag || '💰';
         }
 
         function openMenu() {
             document.getElementById('menu').classList.remove('hidden');
             const list = document.getElementById('full-list');
             list.innerHTML = '';
-            Object.keys(FLAGS).forEach(code => {
+            Object.keys(COUNTRY_DATA).forEach(code => {
                 const picked = myFavs.includes(code);
-                const div = document.createElement('div');
-                div.className = `p-4 rounded-2xl flex flex-col items-center ${picked ? 'bg-white/20 text-white' : 'bg-white/5 text-white/30'}`;
-                div.innerHTML = `<span class="text-2xl">${FLAGS[code]}</span> <span class="text-xs font-bold">${code}</span>`;
-                div.onclick = () => {
+                const item = document.createElement('div');
+                // 選單顯示國旗 + 完整國名
+                item.className = `p-4 rounded-2xl flex justify-between items-center transition-all ${picked ? 'bg-white/20 text-white' : 'bg-white/5 text-white/30'}`;
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">${COUNTRY_DATA[code].flag}</span>
+                        <span class="font-bold">${COUNTRY_DATA[code].name}</span>
+                    </div>
+                    <span class="text-xs opacity-50">${code}</span>
+                `;
+                item.onclick = () => {
                     if(myFavs.includes(code)) {
                         if(myFavs.length > 1) myFavs = myFavs.filter(c => c !== code);
                     } else {
@@ -250,7 +267,7 @@
                     }
                     openMenu();
                 };
-                list.appendChild(div);
+                list.appendChild(item);
             });
         }
 
@@ -263,7 +280,7 @@
             initRates();
             const saved = localStorage.getItem('calc-skin') || 'starry';
             currentSkin = saved;
-            document.getElementById('shell').style.backgroundImage = `url('./skin-${saved}.png')`;
+            document.getElementById('shell').style.backgroundImage = `url('./skin-${saved}.jpg')`;
             updateUI();
         };
     </script>
