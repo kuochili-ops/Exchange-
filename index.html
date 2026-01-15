@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>BAILIU CALC - 紅邊字元極透版</title>
+    <title>BAILIU CALC - 按鍵強化版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #000; font-family: 'Inter', sans-serif; overflow: hidden; }
@@ -26,25 +26,30 @@
             padding: 2.5rem 1.2rem; display: flex; flex-direction: column;
         }
 
-        /* --- 按鍵字元加紅框/紅邊設計 --- */
+        /* --- 按鍵設計：減少透明度 --- */
+        .btn {
+            /* 透明度從 0.1 提高到 0.4，讓背景更顯眼 */
+            background: rgba(255, 255, 255, 0.4); 
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 1.5rem; 
+            display: flex; align-items: center; justify-content: center; 
+            transition: 0.1s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.6); }
+
+        /* 字元紅框效果 */
         .btn-text {
             color: white;
             font-size: 1.6rem;
             font-weight: 900;
-            /* 使用紅邊描繪字元輪廓 */
+            /* 紅色外描邊 */
             -webkit-text-stroke: 1.5px #ff0000; 
-            /* 如果想要更像「框」感，可以增加一點文字陰影 */
-            text-shadow: 0 0 2px #ff0000;
+            text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
         }
-
-        .btn {
-            background: rgba(255, 255, 255, 0.1); 
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 1.5rem; 
-            display: flex; align-items: center; justify-content: center; 
-            transition: 0.1s;
-        }
-        .btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.2); }
 
         /* Flip-board 翻牌動效 */
         #val-display { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
@@ -52,16 +57,16 @@
 
         .country-tab {
             padding: 10px 0; font-size: 11px; font-weight: 800; color: white;
-            background: rgba(255, 255, 255, 0.1); border-radius: 12px;
-            text-align: center; cursor: pointer; transition: 0.2s;
+            background: rgba(255, 255, 255, 0.2); border-radius: 12px;
+            text-align: center; cursor: pointer; transition: 0.2;
         }
         .country-tab.active { background: white; color: black; }
 
         .theme-btn {
             position: absolute; top: 50px; right: 30px;
-            background: rgba(255, 255, 255, 0.2); color: white;
+            background: rgba(255, 255, 255, 0.3); color: white;
             padding: 6px 14px; border-radius: 50px; font-size: 11px; font-weight: 800;
-            backdrop-filter: blur(10px); z-index: 50; border: 1px solid rgba(255,255,255,0.3);
+            backdrop-filter: blur(10px); z-index: 50; border: 1px solid rgba(255,255,255,0.4);
         }
     </style>
 </head>
@@ -109,7 +114,7 @@
                 <button onclick="press('0')" class="btn"><span class="btn-text">0</span></button>
                 <button onclick="press('.')" class="btn"><span class="btn-text">.</span></button>
                 <button onclick="press('+/-')" class="btn"><span class="btn-text">±</span></button>
-                <button onclick="solve()" class="btn bg-emerald-500/20"><span class="btn-text" style="-webkit-text-stroke-color: #10b981;">=</span></button>
+                <button onclick="solve()" class="btn bg-emerald-500/40"><span class="btn-text" style="-webkit-text-stroke-color: #10b981;">=</span></button>
             </div>
         </div>
     </div>
@@ -121,10 +126,8 @@
     </div>
 
     <script>
-        // 配合您的 GitHub 路徑
         const THEME_FILES = ['skin-starry.png', 'skin-hakka.png', 'big_wave.png'];
         let themeIdx = 0;
-
         let expr = '';
         let result = 0;
         let activeCode = 'TWD';
@@ -138,7 +141,6 @@
         };
         let myFavs = ['TWD', 'JPY', 'USD', 'CNY', 'EUR'];
 
-        // --- Flip-board 翻牌模組 ---
         function renderFlipValue(val) {
             const display = document.getElementById('val-display');
             display.classList.add('val-flip');
