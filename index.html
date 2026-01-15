@@ -3,288 +3,285 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>白六即時匯率計算機 - 藝術版</title>
+    <title>白六即時匯率計算機 - 全螢幕藝術版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #222; font-family: 'Inter', sans-serif; overflow: hidden; }
+        body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #1a1a1a; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
 
-        /* 手機外殼 */
-        .phone-container {
-            width: 90vw;
-            max-width: 400px;
-            height: 85vh;
-            border: 12px solid #ffffff;
-            border-radius: 3.5rem;
+        /* 手機殼：圖片真正填滿 */
+        .phone-shell {
+            width: 95vw;
+            max-width: 420px;
+            height: 90vh;
+            border: 10px solid #ffffff;
+            border-radius: 3rem;
             position: relative;
             background-size: cover;
             background-position: center;
             overflow: hidden;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8);
-            transition: background-image 0.5s ease;
+            box-shadow: 0 0 60px rgba(0,0,0,0.6);
+            transition: background-image 0.6s ease;
         }
 
-        /* 磨砂玻璃面板 (覆蓋全螢幕) */
-        .app-overlay {
+        /* 磨砂顯示螢幕：一體化半透明設計 */
+        .glass-ui {
             position: absolute;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 2rem 1.5rem;
+            inset: 15px; /* 留一點點邊讓底圖透出來 */
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(25px) saturate(150%);
+            -webkit-backdrop-filter: blur(25px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 2.2rem;
             display: flex;
             flex-direction: column;
+            padding: 2rem 1.2rem;
         }
 
-        /* 頂部文字 */
-        .app-header h1 {
-            font-size: 2.2rem;
+        /* 頂部標題 */
+        .app-title {
+            font-size: 2rem;
             font-weight: 900;
             font-style: italic;
             text-align: center;
             color: #fff;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-            margin-bottom: 2px;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            margin-bottom: 1.5rem;
         }
 
-        /* 顯示螢幕 */
-        .display-glass {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 1.5rem;
+        /* 顯示數值區 */
+        .display-section {
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 1.2rem;
             padding: 1.5rem;
-            margin: 1rem 0;
+            margin-bottom: 1rem;
             text-align: right;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
         }
 
-        /* 按鍵樣式 */
-        .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; flex-grow: 1; }
-        .calc-btn {
-            border-radius: 1rem;
+        /* 幣別選單：改為完整國名 */
+        .currency-full-names {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            margin-bottom: 1.2rem;
+            padding-bottom: 5px;
+        }
+        .currency-full-names::-webkit-scrollbar { display: none; }
+        
+        .name-tab {
+            padding: 8px 15px;
+            font-size: 0.8rem;
             font-weight: 700;
-            font-size: 1.2rem;
+            color: white;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 50px;
+            white-space: nowrap;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .name-tab.active { background: #fff; color: #000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+
+        /* 按鍵網格 */
+        .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; flex-grow: 1; }
+        .btn {
+            border-radius: 1.2rem;
+            font-weight: 800;
+            font-size: 1.3rem;
+            color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.1s;
-            color: white;
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(5px);
+            transition: all 0.1s;
         }
-        .calc-btn:active { transform: scale(0.92); background: rgba(255,255,255,0.3); }
-        
-        /* 特定顏色 */
-        .btn-op { background: rgba(245, 158, 11, 0.8); } /* 橘色 */
-        .btn-func { background: rgba(99, 102, 241, 0.8); } /* 紫色 */
-        .btn-clear { background: rgba(239, 68, 68, 0.8); } /* 紅色 */
-        .btn-equal { background: rgba(16, 185, 129, 0.8); } /* 綠色 */
+        .btn:active { transform: scale(0.9); background: rgba(255,255,255,0.4); }
+        .btn-orange { background: rgba(245, 158, 11, 0.7); }
+        .btn-indigo { background: rgba(99, 102, 241, 0.7); }
+        .btn-red { background: rgba(239, 68, 68, 0.7); }
+        .btn-green { background: rgba(16, 185, 129, 0.7); }
 
-        /* 幣別切換列 */
-        .currency-bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 1rem; }
-        .curr-tab {
-            padding: 5px 0;
-            font-size: 0.7rem;
-            font-weight: 800;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border-radius: 0.5rem;
-            text-align: center;
-            transition: all 0.3s;
-        }
-        .curr-tab.active { background: white; color: black; transform: scale(1.05); }
-
-        /* 主題切換按鈕 (漂浮在頂部) */
-        .skin-switches {
+        /* 皮膚切換按鈕 */
+        .skin-toggle {
             position: absolute;
-            top: 10px;
-            right: 20px;
-            display: flex;
-            gap: 10px;
-            z-index: 10;
+            top: 25px;
+            right: 25px;
+            z-index: 50;
         }
-        .skin-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid white; cursor: pointer; }
-
-        /* 隱藏彈窗 */
-        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-    <div id="phone" class="phone-container">
-        <div class="skin-switches">
-            <div onclick="changeSkin('hakka')" class="skin-dot" style="background: #1e3a8a;" title="客家"></div>
-            <div onclick="changeSkin('starry')" class="skin-dot" style="background: #facc15;" title="星夜"></div>
-            <div onclick="changeSkin('default')" class="skin-dot" style="background: #444;" title="預設"></div>
+    <div id="app-shell" class="phone-shell">
+        <div class="skin-toggle">
+            <button onclick="toggleTheme()" class="bg-white/20 backdrop-blur-md p-2 rounded-full border border-white/30 text-white text-xs font-bold">🎨 Switch Skin</button>
         </div>
 
-        <div class="app-overlay">
-            <header class="app-header">
-                <h1 id="app-title">BAILIU CALC</h1>
-                <p class="text-center text-[10px] text-white/50 font-bold tracking-widest uppercase">Ready for Exchange</p>
-            </header>
+        <div class="glass-ui">
+            <h1 id="main-title" class="app-title">BAILIU CALC</h1>
 
-            <div class="display-glass">
-                <div id="expr" class="h-4 text-white/40 text-xs font-mono mb-1 truncate"></div>
+            <div class="display-section">
+                <div id="history" class="text-white/40 text-xs font-mono h-4 mb-1"></div>
                 <div class="flex justify-between items-baseline">
-                    <span id="curr-code" class="text-white/60 font-bold text-lg">TWD</span>
-                    <span id="val" class="text-4xl font-black text-white font-mono truncate">0</span>
+                    <span id="active-country" class="text-white/60 font-bold text-sm">Taiwan</span>
+                    <span id="output" class="text-4xl font-black text-white font-mono">0</span>
                 </div>
             </div>
 
-            <div id="currency-bar" class="currency-bar"></div>
+            <div id="name-bar" class="currency-full-names"></div>
 
             <div class="calc-grid">
-                <button onclick="press('C')" class="calc-btn btn-clear">C</button>
-                <button onclick="press('⌫')" class="calc-btn">⌫</button>
-                <button onclick="openSettings()" class="calc-btn btn-func">⚙️</button>
-                <button onclick="press('/')" class="calc-btn btn-op">÷</button>
+                <button onclick="input('C')" class="btn btn-red">C</button>
+                <button onclick="input('⌫')" class="btn">⌫</button>
+                <button onclick="openMenu()" class="btn btn-indigo">⚙️</button>
+                <button onclick="input('/')" class="btn btn-orange">÷</button>
 
-                <button onclick="press('7')" class="calc-btn">7</button>
-                <button onclick="press('8')" class="calc-btn">8</button>
-                <button onclick="press('9')" class="calc-btn">9</button>
-                <button onclick="press('*')" class="calc-btn btn-op">×</button>
+                <button onclick="input('7')" class="btn">7</button>
+                <button onclick="input('8')" class="btn">8</button>
+                <button onclick="input('9')" class="btn">9</button>
+                <button onclick="input('*')" class="btn btn-orange">×</button>
 
-                <button onclick="press('4')" class="calc-btn">4</button>
-                <button onclick="press('5')" class="calc-btn">5</button>
-                <button onclick="press('6')" class="calc-btn">6</button>
-                <button onclick="press('-')" class="calc-btn btn-op">-</button>
+                <button onclick="input('4')" class="btn">4</button>
+                <button onclick="input('5')" class="btn">5</button>
+                <button onclick="input('6')" class="btn">6</button>
+                <button onclick="input('-')" class="btn btn-orange">-</button>
 
-                <button onclick="press('1')" class="calc-btn">1</button>
-                <button onclick="press('2')" class="calc-btn">2</button>
-                <button onclick="press('3')" class="calc-btn">3</button>
-                <button onclick="press('+')" class="calc-btn btn-op">+</button>
+                <button onclick="input('1')" class="btn">1</button>
+                <button onclick="input('2')" class="btn">2</button>
+                <button onclick="input('3')" class="btn">3</button>
+                <button onclick="input('+')" class="btn btn-orange">+</button>
 
-                <button onclick="press('0')" class="calc-btn">0</button>
-                <button onclick="press('.')" class="calc-btn">.</button>
-                <button onclick="press('+/-')" class="calc-btn">±</button>
-                <button onclick="calculate()" class="calc-btn btn-equal">=</button>
+                <button onclick="input('0')" class="btn">0</button>
+                <button onclick="input('.')" class="btn">.</button>
+                <button onclick="input('+/-')" class="btn">±</button>
+                <button onclick="solve()" class="btn btn-green">=</button>
             </div>
         </div>
     </div>
 
-    <div id="modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] hidden flex flex-col p-10">
-        <h2 class="text-white text-2xl font-black mb-6 italic">SET CURRENCIES</h2>
-        <div id="modal-list" class="grid grid-cols-2 gap-4 overflow-y-auto mb-10"></div>
-        <button onclick="closeSettings()" class="mt-auto w-full py-5 bg-white text-black font-black rounded-2xl">SAVE & CLOSE</button>
+    <div id="menu" class="fixed inset-0 bg-black/95 backdrop-blur-xl z-[100] hidden flex flex-col p-10">
+        <h2 class="text-white text-2xl font-black mb-6 italic">SELECT COUNTRIES</h2>
+        <div id="full-list" class="grid grid-cols-1 gap-3 overflow-y-auto mb-10"></div>
+        <button onclick="closeMenu()" class="mt-auto w-full py-5 bg-white text-black font-black rounded-3xl">SAVE & APPLY</button>
     </div>
 
     <script>
-        let expression = '';
-        let lastValue = 0;
-        let currentCurrency = 'TWD';
+        let expr = '';
+        let val = 0;
+        let activeCode = 'TWD';
         let rates = {};
-        let myCurrencies = ['TWD', 'JPY', 'USD', 'EUR', 'CNY'];
-        const ALL_CODES = ["TWD","USD","JPY","EUR","CNY","HKD","GBP","AUD","SGD","KRW","VND","THB"];
+        let currentSkin = 'starry';
+        
+        // 國名對照表
+        const COUNTRY_NAMES = {
+            "TWD": "Taiwan", "USD": "United States", "JPY": "Japan", 
+            "EUR": "Euro Zone", "CNY": "China", "HKD": "Hong Kong", 
+            "GBP": "United Kingdom", "AUD": "Australia", "KRW": "South Korea", 
+            "VND": "Vietnam", "THB": "Thailand", "SGD": "Singapore"
+        };
+        
+        let selectedCodes = ['TWD', 'JPY', 'USD', 'CNY', 'EUR'];
 
-        // 皮膚切換
-        function changeSkin(skin) {
-            const phone = document.getElementById('phone');
-            const title = document.getElementById('app-title');
-            if(skin === 'hakka') {
-                phone.style.backgroundImage = "url('./skin-hakka.jpg')";
-                title.style.color = "#ffffff";
-            } else if(skin === 'starry') {
-                phone.style.backgroundImage = "url('./skin-starry.jpg')";
-                title.style.color = "#facc15"; // 星夜金
+        function toggleTheme() {
+            currentSkin = (currentSkin === 'starry') ? 'hakka' : 'starry';
+            applySkin();
+        }
+
+        function applySkin() {
+            const shell = document.getElementById('app-shell');
+            const title = document.getElementById('main-title');
+            if(currentSkin === 'starry') {
+                shell.style.backgroundImage = "url('./skin-starry.jpg')";
+                title.style.color = "#facc15";
             } else {
-                phone.style.backgroundImage = "none";
-                phone.style.backgroundColor = "#333";
+                shell.style.backgroundImage = "url('./skin-hakka.jpg')";
+                title.style.color = "#ffffff";
             }
-            localStorage.setItem('bailiu-skin', skin);
         }
 
-        // 換匯核心
-        async function getRates() {
-            try {
-                const res = await fetch('https://open.er-api.com/v6/latest/TWD');
-                const data = await res.json();
-                for(let [c, r] of Object.entries(data.rates)) rates[c] = 1/r;
-                rates['TWD'] = 1.0;
-                renderCurrencyBar();
-            } catch(e) { console.error("Rates error"); }
+        async function loadRates() {
+            const res = await fetch('https://open.er-api.com/v6/latest/TWD');
+            const data = await res.json();
+            for(let [c, r] of Object.entries(data.rates)) rates[c] = 1/r;
+            rates['TWD'] = 1.0;
+            renderBar();
         }
 
-        function renderCurrencyBar() {
-            const bar = document.getElementById('currency-bar');
+        function renderBar() {
+            const bar = document.getElementById('name-bar');
             bar.innerHTML = '';
-            myCurrencies.forEach(code => {
-                const div = document.createElement('div');
-                div.className = `curr-tab ${code === currentCurrency ? 'active' : ''}`;
-                div.textContent = code;
-                div.onclick = () => {
-                    // 執行換匯邏輯
-                    const valInTwd = lastValue * (rates[currentCurrency] || 1);
-                    lastValue = valInTwd / (rates[code] || 1);
-                    expression = String(lastValue);
-                    currentCurrency = code;
-                    renderCurrencyBar();
-                    updateUI();
-                };
-                bar.appendChild(div);
-            });
-        }
-
-        function press(key) {
-            if(key === 'C') { expression = ''; lastValue = 0; }
-            else if(key === '⌫') { expression = expression.slice(0,-1); }
-            else if(key === '+/-') { lastValue = -lastValue; expression = String(lastValue); }
-            else { expression += key; }
-            
-            try {
-                const res = eval(expression.replace(/[^-()\d/*+.]/g,''));
-                if(isFinite(res)) lastValue = res;
-            } catch(e) {}
-            updateUI();
-        }
-
-        function calculate() {
-            try {
-                const res = eval(expression.replace(/[^-()\d/*+.]/g,''));
-                if(isFinite(res)) {
-                    lastValue = res;
-                    expression = String(res);
-                }
-            } catch(e) {}
-            updateUI();
-        }
-
-        function updateUI() {
-            document.getElementById('expr').textContent = expression;
-            document.getElementById('val').textContent = Number(lastValue).toLocaleString(undefined, {maximumFractionDigits: 4});
-            document.getElementById('curr-code').textContent = currentCurrency;
-        }
-
-        // 彈窗設定
-        function openSettings() {
-            document.getElementById('modal').classList.remove('hidden');
-            const list = document.getElementById('modal-list');
-            list.innerHTML = '';
-            ALL_CODES.forEach(code => {
-                const active = myCurrencies.includes(code);
+            selectedCodes.forEach(code => {
                 const btn = document.createElement('div');
-                btn.className = `p-4 rounded-xl text-center font-bold ${active ? 'bg-indigo-600 text-white' : 'bg-white/10 text-white/50'}`;
-                btn.textContent = code;
+                btn.className = `name-tab ${code === activeCode ? 'active' : ''}`;
+                btn.textContent = COUNTRY_NAMES[code] || code;
                 btn.onclick = () => {
-                    if(myCurrencies.includes(code)) {
-                        if(myCurrencies.length > 1) myCurrencies = myCurrencies.filter(c => c !== code);
-                    } else {
-                        if(myCurrencies.length < 5) myCurrencies.push(code);
-                        else { myCurrencies.shift(); myCurrencies.push(code); }
-                    }
-                    openSettings();
+                    const twdAmount = val * (rates[activeCode] || 1);
+                    val = twdAmount / (rates[code] || 1);
+                    expr = String(val);
+                    activeCode = code;
+                    renderBar();
+                    syncUI();
                 };
-                list.appendChild(btn);
+                bar.appendChild(btn);
             });
         }
 
-        function closeSettings() {
-            document.getElementById('modal').classList.add('hidden');
-            renderCurrencyBar();
+        function input(key) {
+            if(key === 'C') { expr = ''; val = 0; }
+            else if(key === '⌫') { expr = expr.slice(0,-1); }
+            else if(key === '+/-') { val = -val; expr = String(val); }
+            else { expr += key; }
+            try { 
+                const res = eval(expr.replace(/[^-()\d/*+.]/g,''));
+                if(isFinite(res)) val = res;
+            } catch(e) {}
+            syncUI();
+        }
+
+        function solve() {
+            try {
+                const res = eval(expr.replace(/[^-()\d/*+.]/g,''));
+                if(isFinite(res)) { val = res; expr = String(res); }
+            } catch(e) {}
+            syncUI();
+        }
+
+        function syncUI() {
+            document.getElementById('history').textContent = expr;
+            document.getElementById('output').textContent = Number(val).toLocaleString(undefined, {maximumFractionDigits: 4});
+            document.getElementById('active-country').textContent = COUNTRY_NAMES[activeCode] || activeCode;
+        }
+
+        function openMenu() {
+            document.getElementById('menu').classList.remove('hidden');
+            const list = document.getElementById('full-list');
+            list.innerHTML = '';
+            Object.keys(COUNTRY_NAMES).forEach(code => {
+                const isPicked = selectedCodes.includes(code);
+                const item = document.createElement('div');
+                item.className = `p-4 rounded-2xl flex justify-between items-center ${isPicked ? 'bg-indigo-600 text-white' : 'bg-white/10 text-white/40'}`;
+                item.innerHTML = `<span>${COUNTRY_NAMES[code]}</span> <small>${code}</small>`;
+                item.onclick = () => {
+                    if(selectedCodes.includes(code)) {
+                        if(selectedCodes.length > 1) selectedCodes = selectedCodes.filter(c => c !== code);
+                    } else {
+                        if(selectedCodes.length < 6) selectedCodes.push(code);
+                    }
+                    openMenu();
+                };
+                list.appendChild(item);
+            });
+        }
+
+        function closeMenu() {
+            document.getElementById('menu').classList.add('hidden');
+            renderBar();
         }
 
         window.onload = () => {
-            getRates();
-            changeSkin(localStorage.getItem('bailiu-skin') || 'starry');
+            loadRates();
+            applySkin();
+            syncUI();
         };
     </script>
 </body>
