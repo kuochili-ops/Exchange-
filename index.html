@@ -15,7 +15,6 @@
             display: flex; align-items: center; justify-content: center;
         }
 
-        /* 極致透明面板 */
         .calc-panel {
             width: 92%; height: 88%; 
             background: rgba(255, 255, 255, 0.01); 
@@ -26,7 +25,6 @@
             padding: 2.5rem 1.2rem; display: flex; flex-direction: column;
         }
 
-        /* 按鍵設計：低透明度實體感 */
         .btn {
             background: rgba(255, 255, 255, 0.45); 
             backdrop-filter: blur(8px);
@@ -40,7 +38,6 @@
         
         .btn:active { transform: scale(0.92); background: rgba(255, 255, 255, 0.6); }
 
-        /* 字元紅框描邊 */
         .btn-text {
             color: white;
             font-size: 1.6rem;
@@ -49,7 +46,6 @@
             text-shadow: 0 0 8px rgba(255, 0, 0, 0.4);
         }
 
-        /* Flip-board 翻牌動效模組 */
         #val-display { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .val-flip { transform: translateY(-12px); opacity: 0; filter: blur(3px); }
 
@@ -66,6 +62,10 @@
             padding: 6px 14px; border-radius: 50px; font-size: 11px; font-weight: 800;
             backdrop-filter: blur(10px); z-index: 50; border: 1px solid rgba(255,255,255,0.4);
         }
+
+        /* 隱藏捲軸但保留功能 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body>
@@ -117,10 +117,10 @@
         </div>
     </div>
 
-    <div id="menu" class="fixed inset-0 bg-black/95 backdrop-blur-3xl z-[100] hidden flex flex-col p-10">
-        <h2 class="text-white text-2xl font-black mb-8 italic">幣別管理</h2>
-        <div id="full-list" class="grid grid-cols-1 gap-4 overflow-y-auto pr-2"></div>
-        <button onclick="closeMenu()" class="mt-auto w-full py-5 bg-white text-black font-black rounded-3xl shadow-2xl">儲存變更</button>
+    <div id="menu" class="fixed inset-0 bg-black/95 backdrop-blur-3xl z-[100] hidden flex flex-col p-8">
+        <h2 class="text-white text-3xl font-black mb-6 italic tracking-tight">幣別選擇 <span class="text-sm font-normal opacity-50 block">請挑選 5 個常用國家</span></h2>
+        <div id="full-list" class="flex-grow overflow-y-auto no-scrollbar grid grid-cols-1 gap-3 pb-8"></div>
+        <button onclick="closeMenu()" class="w-full py-5 bg-white text-black font-black rounded-3xl shadow-2xl active:scale-95 transition-transform">儲存設置</button>
     </div>
 
     <script>
@@ -131,15 +131,28 @@
         let activeCode = 'TWD';
         let rates = {};
 
+        // 擴展後的國家清單
         const COUNTRY_DATA = {
-            "TWD": { name: "Taiwan", flag: "🇹🇼" }, "USD": { name: "United States", flag: "🇺🇸" },
-            "JPY": { name: "Japan", flag: "🇯🇵" }, "EUR": { name: "Euro Zone", flag: "🇪🇺" },
-            "CNY": { name: "China", flag: "🇨🇳" }, "HKD": { name: "Hong Kong", flag: "🇭🇰" },
-            "KRW": { name: "South Korea", flag: "🇰🇷" }
+            "TWD": { name: "台灣", flag: "🇹🇼" },
+            "JPY": { name: "日本", flag: "🇯🇵" },
+            "USD": { name: "美國", flag: "🇺🇸" },
+            "KRW": { name: "韓國", flag: "🇰🇷" },
+            "THB": { name: "泰國", flag: "🇹🇭" },
+            "EUR": { name: "歐元區", flag: "🇪🇺" },
+            "GBP": { name: "英國", flag: "🇬🇧" },
+            "CAD": { name: "加拿大", flag: "🇨🇦" },
+            "SGD": { name: "新加坡", flag: "🇸🇬" },
+            "CNY": { name: "中國", flag: "🇨🇳" },
+            "HKD": { name: "香港", flag: "🇭🇰" },
+            "CHF": { name: "瑞士", flag: "🇨🇭" },
+            "SEK": { name: "瑞典", flag: "🇸🇪" },
+            "AUD": { name: "澳洲", flag: "🇦🇺" },
+            "VND": { name: "越南", flag: "🇻🇳" }
         };
-        let myFavs = ['TWD', 'JPY', 'USD', 'CNY', 'EUR'];
+        
+        // 初始常用的 5 個
+        let myFavs = ['TWD', 'JPY', 'USD', 'THB', 'EUR'];
 
-        // --- 翻牌動效核心 ---
         function renderFlipValue(val) {
             const display = document.getElementById('val-display');
             display.classList.add('val-flip');
@@ -227,8 +240,18 @@
             Object.keys(COUNTRY_DATA).forEach(code => {
                 const picked = myFavs.includes(code);
                 const item = document.createElement('div');
-                item.className = `p-4 rounded-2xl flex justify-between items-center ${picked ? 'bg-white/20 text-white' : 'bg-white/5 text-white/30'}`;
-                item.innerHTML = `<div class="flex items-center gap-4"><span class="text-3xl">${COUNTRY_DATA[code].flag}</span><span class="font-bold text-lg">${COUNTRY_DATA[code].name}</span></div>`;
+                item.className = `p-5 rounded-3xl flex justify-between items-center transition-all ${picked ? 'bg-white/20 border-white/30 text-white' : 'bg-white/5 border-transparent text-white/30'}`;
+                item.style.borderWidth = '1px';
+                item.innerHTML = `
+                    <div class="flex items-center gap-5">
+                        <span class="text-4xl">${COUNTRY_DATA[code].flag}</span>
+                        <div>
+                            <div class="font-black text-xl leading-none">${code}</div>
+                            <div class="text-xs opacity-60 mt-1">${COUNTRY_DATA[code].name}</div>
+                        </div>
+                    </div>
+                    ${picked ? '<div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>' : ''}
+                `;
                 item.onclick = () => {
                     if(myFavs.includes(code)) { if(myFavs.length > 1) myFavs = myFavs.filter(c => c !== code); }
                     else { if(myFavs.length < 5) myFavs.push(code); }
