@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>白六即時匯率計算機 - 高透明藝術版</title>
+    <title>白六即時匯率計算機 - 極透藝術版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #000; font-family: 'Inter', sans-serif; overflow: hidden; }
@@ -22,14 +22,14 @@
             justify-content: center;
         }
 
-        /* 計算機主面板：80% 透明 (Alpha 0.2) */
+        /* 計算機主面板：90% 透明 (Alpha 0.1) */
         .calc-panel {
             width: 90%;
             height: 85%;
-            background: rgba(255, 255, 255, 0.2); 
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1); 
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 3rem;
             padding: 2.5rem 1.5rem;
             display: flex;
@@ -59,7 +59,7 @@
             font-size: 13px;
             font-weight: 700;
             color: white;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.15);
             border-radius: 50px;
             white-space: nowrap;
             cursor: pointer;
@@ -71,7 +71,7 @@
         .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; flex-grow: 1; }
         .btn {
             background: rgba(255, 255, 255, 0.4); 
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 1.2rem;
             color: white;
             font-size: 1.4rem;
@@ -83,24 +83,24 @@
         }
         .btn:active { transform: scale(0.92); background: rgba(255, 255, 255, 0.6); }
 
-        /* 功能鍵縮寫樣式 */
-        .btn-op { background: rgba(245, 158, 11, 0.5); } /* 橘色透明 */
-        .btn-func { background: rgba(99, 102, 241, 0.5); } /* 紫色透明 */
-        .btn-clear { background: rgba(239, 68, 68, 0.5); } /* 紅色透明 */
+        /* 功能鍵配色 */
+        .btn-op { background: rgba(245, 158, 11, 0.45); } 
+        .btn-func { background: rgba(99, 102, 241, 0.45); } 
+        .btn-clear { background: rgba(239, 68, 68, 0.45); } 
 
-        /* 主題切換按鈕 */
+        /* 切換按鈕 */
         .theme-btn {
             position: absolute;
             top: 40px;
             right: 30px;
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.2);
             color: white;
             padding: 6px 15px;
             border-radius: 50px;
             font-size: 12px;
             font-weight: 800;
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.4);
+            border: 1px solid rgba(255,255,255,0.3);
             z-index: 100;
         }
     </style>
@@ -108,7 +108,7 @@
 <body>
 
     <div id="shell" class="phone-shell">
-        <button onclick="switchTheme()" class="theme-btn">🎨切換主題</button>
+        <button onclick="switchTheme()" class="theme-btn">🎨 切換主題</button>
 
         <div class="calc-panel">
             <header class="mb-6">
@@ -149,7 +149,7 @@
                 <button onclick="press('0')" class="btn">0</button>
                 <button onclick="press('.')" class="btn">.</button>
                 <button onclick="press('+/-')" class="btn">±</button>
-                <button onclick="solve()" class="btn bg-emerald-500/50">=</button>
+                <button onclick="solve()" class="btn bg-emerald-500/40">=</button>
             </div>
         </div>
     </div>
