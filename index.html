@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>白六即時匯率計算機 - Theme 目錄版</title>
+    <title>白六即時匯率計算機 - 路徑修正版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #000; font-family: 'Inter', sans-serif; overflow: hidden; }
+        body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #111; font-family: 'Inter', sans-serif; overflow: hidden; }
 
-        /* 背景：指向 theme 子目錄 */
+        /* 背景容器：強制填滿 */
         .phone-shell {
             width: 100vw;
             max-width: 430px;
@@ -16,7 +16,8 @@
             position: relative;
             background-size: cover;
             background-position: center;
-            transition: background-image 0.8s ease-in-out;
+            background-repeat: no-repeat;
+            transition: background-image 0.5s ease-in-out;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -29,35 +30,31 @@
             background: rgba(255, 255, 255, 0.01); 
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 3rem;
             padding: 2.5rem 1.2rem;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+            box-shadow: 0 40px 100px rgba(0,0,0,0.6);
         }
 
-        /* 顯示區 */
-        .display-area { text-align: right; margin-bottom: 1.5rem; }
-
-        /* 主畫面：三字母按鍵 */
-        .country-selector { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 1.2rem; }
+        /* 三字母縮寫按鍵列 */
+        .country-selector { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 1.5rem; }
         .country-tab {
             padding: 10px 0; font-size: 11px; font-weight: 800; color: white;
-            background: rgba(255, 255, 255, 0.12); border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1); border-radius: 12px;
             text-align: center; cursor: pointer; transition: 0.2s;
         }
         .country-tab.active { background: white; color: black; }
 
-        /* 按鍵透明度 60% */
+        /* 60% 透明按鍵 */
         .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; flex-grow: 1; }
         .btn {
-            background: rgba(255, 255, 255, 0.4); 
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: 1.2rem; color: white; font-size: 1.4rem; font-weight: 700;
             display: flex; align-items: center; justify-content: center; transition: 0.1s;
         }
-        .btn:active { transform: scale(0.92); background: rgba(255, 255, 255, 0.6); }
+        .btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.6); }
 
         .btn-op { background: rgba(245, 158, 11, 0.45); } 
         .btn-func { background: rgba(99, 102, 241, 0.45); } 
@@ -73,19 +70,19 @@
 </head>
 <body>
 
-    <div id="shell" class="phone-shell">
-        <button onclick="switchTheme()" class="theme-btn">🎨 切換主題</button>
+    <div id="shell" class="phone-shell" style="background-image: url('theme/skin-starry.png');">
+        <button onclick="switchTheme()" class="theme-btn">🎨 風格切換</button>
 
         <div class="calc-panel">
             <header class="mb-6">
-                <h1 class="text-2xl font-black italic tracking-tighter text-white text-center opacity-60">BAILIU CALC</h1>
+                <h1 id="title-tag" class="text-2xl font-black italic tracking-tighter text-white text-center opacity-60">BAILIU CALC</h1>
             </header>
 
-            <div class="display-area">
+            <div class="text-right mb-6 px-1">
                 <div id="history" class="text-white/30 text-xs font-mono h-4 mb-1"></div>
-                <div class="flex justify-between items-center px-1">
+                <div class="flex justify-between items-center">
                     <span id="flag-display" class="text-4xl">🇹🇼</span>
-                    <span id="val" class="text-5xl font-black text-white font-mono">0</span>
+                    <span id="val" class="text-5xl font-black text-white font-mono tracking-tighter">0</span>
                 </div>
             </div>
 
@@ -96,22 +93,18 @@
                 <button onclick="press('⌫')" class="btn">⌫</button>
                 <button onclick="openMenu()" class="btn btn-func">⚙️</button>
                 <button onclick="press('/')" class="btn btn-op">÷</button>
-
                 <button onclick="press('7')" class="btn">7</button>
                 <button onclick="press('8')" class="btn">8</button>
                 <button onclick="press('9')" class="btn">9</button>
                 <button onclick="press('*')" class="btn btn-op">×</button>
-
                 <button onclick="press('4')" class="btn">4</button>
                 <button onclick="press('5')" class="btn">5</button>
                 <button onclick="press('6')" class="btn">6</button>
                 <button onclick="press('-')" class="btn btn-op">-</button>
-
                 <button onclick="press('1')" class="btn">1</button>
                 <button onclick="press('2')" class="btn">2</button>
                 <button onclick="press('3')" class="btn">3</button>
                 <button onclick="press('+')" class="btn btn-op">+</button>
-
                 <button onclick="press('0')" class="btn">0</button>
                 <button onclick="press('.')" class="btn">.</button>
                 <button onclick="press('+/-')" class="btn">±</button>
@@ -150,7 +143,7 @@
         
         let myFavs = ['TWD', 'JPY', 'USD', 'CNY', 'EUR'];
 
-        // 指向 theme 目錄
+        // 核心切換邏輯
         function switchTheme() {
             currentSkin = (currentSkin === 'starry') ? 'hakka' : 'starry';
             applySkin();
@@ -158,9 +151,23 @@
 
         function applySkin() {
             const shell = document.getElementById('shell');
-            // 注意：這裡統一使用 .png 並指向 theme 子目錄
-            shell.style.backgroundImage = `url('./theme/skin-${currentSkin}.png')`;
-            localStorage.setItem('calc-skin-v3', currentSkin);
+            const titleTag = document.getElementById('title-tag');
+            
+            // 使用相對路徑，去除 ./ 嘗試最直接的抓取
+            const imgPath = `theme/skin-${currentSkin}.png`;
+            
+            // 預載圖片檢查
+            const img = new Image();
+            img.src = imgPath;
+            img.onload = () => {
+                shell.style.backgroundImage = `url('${imgPath}')`;
+                titleTag.textContent = "BAILIU CALC"; // 加載成功恢復標題
+                localStorage.setItem('calc-skin-png-v4', currentSkin);
+            };
+            img.onerror = () => {
+                titleTag.textContent = "IMG ERROR: CHECK PATH"; // 加載失敗顯示提示
+                console.error("無法載入圖片:", imgPath);
+            };
         }
 
         async function initRates() {
@@ -170,7 +177,7 @@
                 for(let [c, r] of Object.entries(data.rates)) rates[c] = 1/r;
                 rates['TWD'] = 1.0;
                 renderSelector();
-            } catch(e) { console.error("API error"); }
+            } catch(e) { console.error("Rate Fetch Fail"); }
         }
 
         function renderSelector() {
@@ -225,7 +232,6 @@
             Object.keys(COUNTRY_DATA).forEach(code => {
                 const picked = myFavs.includes(code);
                 const item = document.createElement('div');
-                // 管理選單顯示完整名稱
                 item.className = `p-4 rounded-2xl flex justify-between items-center ${picked ? 'bg-white/20 text-white' : 'bg-white/5 text-white/30'}`;
                 item.innerHTML = `
                     <div class="flex items-center gap-4">
@@ -253,7 +259,7 @@
 
         window.onload = () => {
             initRates();
-            currentSkin = localStorage.getItem('calc-skin-v3') || 'starry';
+            currentSkin = localStorage.getItem('calc-skin-png-v4') || 'starry';
             applySkin();
             updateUI();
         };
