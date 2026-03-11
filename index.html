@@ -15,7 +15,6 @@
             display: flex; align-items: center; justify-content: center;
         }
 
-        /* 面板縮小高度，留出底部空間展示底圖 */
         .calc-panel {
             width: 92%; height: 80%; 
             background: rgba(255, 255, 255, 0.01); 
@@ -27,7 +26,6 @@
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
-        /* 按鍵容器改為正方形，避免拉長 */
         .btn {
             aspect-ratio: 1 / 1; 
             background: rgba(255, 255, 255, 0.4); 
@@ -41,7 +39,6 @@
         
         .btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.6); }
 
-        /* 字元放大至 2.2rem */
         .btn-text {
             color: white;
             font-size: 2.2rem;
@@ -50,7 +47,6 @@
             text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
         }
 
-        /* Flip-board 模組保持 */
         #val-display { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .val-flip { transform: translateY(-15px); opacity: 0; filter: blur(4px); }
 
@@ -128,19 +124,14 @@
 
     <script>
         const THEME_FILES = ['skin-starry.png', 'skin-hakka.png', 'big_wave.png'];
-        let themeIdx = 0;
-        let expr = '';
-        let result = 0;
-        let activeCode = 'TWD';
-        let rates = {};
-
         const COUNTRY_DATA = {
             "TWD": { en: "Taiwan", cn: "台灣", flag: "🇹🇼" },
-            "JPY": { en: "Japan", cn: "日本", flag: "🇯🇵" },
             "USD": { en: "United States", cn: "美國", flag: "🇺🇸" },
-            "KRW": { en: "South Korea", cn: "韓國", flag: "🇰🇷" },
-            "THB": { en: "Thailand", cn: "泰國", flag: "🇹🇭" },
             "EUR": { en: "Euro Zone", cn: "歐元區", flag: "🇪🇺" },
+            "JPY": { en: "Japan", cn: "日本", flag: "🇯🇵" },
+            "CZK": { en: "Czech Republic", cn: "捷克", flag: "🇨🇿" },
+            "THB": { en: "Thailand", cn: "泰國", flag: "🇹🇭" },
+            "KRW": { en: "South Korea", cn: "韓國", flag: "🇰🇷" },
             "GBP": { en: "United Kingdom", cn: "英國", flag: "🇬🇧" },
             "CAD": { en: "Canada", cn: "加拿大", flag: "🇨🇦" },
             "SGD": { en: "Singapore", cn: "新加坡", flag: "🇸🇬" },
@@ -151,8 +142,29 @@
             "AUD": { en: "Australia", cn: "澳洲", flag: "🇦🇺" },
             "VND": { en: "Vietnam", cn: "越南", flag: "🇻🇳" }
         };
-        
-        let myFavs = ['TWD', 'JPY', 'USD', 'THB', 'EUR'];
+
+        let themeIdx = 0;
+        let expr = '';
+        let result = 0;
+        let activeCode = 'TWD';
+        // 初始設定為您指定的五個國家
+        let myFavs = ['TWD', 'USD', 'EUR', 'JPY', 'CZK'];
+        let rates = {};
+
+        function loadSettings() {
+            const savedFavs = localStorage.getItem('white6-favs');
+            const savedActive = localStorage.getItem('white6-active');
+            const savedTheme = localStorage.getItem('saved-theme-idx');
+            
+            if (savedFavs) myFavs = JSON.parse(savedFavs);
+            if (savedActive) activeCode = savedActive;
+            if (savedTheme) themeIdx = parseInt(savedTheme);
+        }
+
+        function saveSettings() {
+            localStorage.setItem('white6-favs', JSON.stringify(myFavs));
+            localStorage.setItem('white6-active', activeCode);
+        }
 
         function renderFlipValue(val) {
             const display = document.getElementById('val-display');
@@ -201,6 +213,7 @@
                     result = twdVal / (rates[code] || 1);
                     expr = result.toFixed(2);
                     activeCode = code;
+                    saveSettings();
                     renderSelector();
                     updateUI();
                 };
@@ -261,11 +274,15 @@
             });
         }
 
-        function closeMenu() { document.getElementById('menu').classList.add('hidden'); renderSelector(); }
+        function closeMenu() { 
+            document.getElementById('menu').classList.add('hidden'); 
+            saveSettings(); 
+            renderSelector(); 
+        }
 
         window.onload = () => {
+            loadSettings();
             initRates();
-            themeIdx = parseInt(localStorage.getItem('saved-theme-idx')) || 0;
             applyTheme();
             updateUI();
         };
