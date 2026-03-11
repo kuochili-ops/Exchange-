@@ -2,59 +2,55 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>𓃥 White 6 CALC</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* 核心防護：禁止選取、禁止縮放、禁止點擊高亮 */
+        * {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none; 
+            -webkit-user-select: none;
+            touch-action: manipulation; /* 禁止雙擊縮放，僅允許滾動與單擊 */
+        }
+
         body { 
-            margin: 0; 
-            height: 100dvh; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            background-color: #000; 
-            font-family: 'Inter', sans-serif; 
+            margin: 0; height: 100dvh; display: flex; 
+            align-items: center; justify-content: center; 
+            background-color: #000; font-family: 'Inter', sans-serif; 
             overflow: hidden; 
         }
 
         .phone-shell {
-            width: 100vw; max-width: 430px; 
-            height: 100dvh;
+            width: 100vw; max-width: 430px; height: 100dvh;
             position: relative; background-size: cover; background-position: center;
             transition: background-image 0.8s ease-in-out;
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
-            /* 預留底部安全區域，防止按鍵與 Chrome 導覽列重疊 */
             padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
         }
 
         .calc-panel {
-            width: 92%; 
-            /* 改用 auto 高度，並確保在小螢幕上不會被切斷 */
-            height: auto;
-            min-height: min-content;
+            width: 92%; height: auto;
             background: rgba(255, 255, 255, 0.01); 
             backdrop-filter: blur(12px) saturate(180%); 
             -webkit-backdrop-filter: blur(12px) saturate(180%);
             border: 1px solid rgba(255, 255, 255, 0.12); 
             border-radius: 3rem;
-            padding: 1.5rem 1rem; 
-            display: flex; flex-direction: column;
+            padding: 1.5rem 1rem; display: flex; flex-direction: column;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            /* 確保內容溢出時面板會跟著變長，而不是把內容切掉 */
-            margin-top: 10px;
-            margin-bottom: 10px;
+            margin-top: 10px; margin-bottom: 10px;
         }
 
         .btn {
             aspect-ratio: 1 / 1; 
             background: rgba(255, 255, 255, 0.4); 
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
             border: 1.5px solid rgba(255, 255, 255, 0.25);
             border-radius: 1.25rem; 
             display: flex; align-items: center; justify-content: center; 
             transition: 0.1s;
+            cursor: pointer;
         }
         
         .btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.6); }
@@ -63,6 +59,7 @@
             color: white; font-size: 2rem; font-weight: 900;
             -webkit-text-stroke: 1.5px #ff0000; 
             text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+            pointer-events: none; /* 確保點擊的是按鈕本身而非文字 */
         }
 
         #history {
@@ -87,7 +84,7 @@
             backdrop-filter: blur(10px); z-index: 50; border: 1px solid rgba(255,255,255,0.4);
         }
 
-        /* 在窄螢幕上微調間距 */
+        /* 小螢幕調整 */
         @media (max-height: 700px) {
             .calc-panel { padding: 1rem 0.8rem; }
             .calc-grid { gap: 0.5rem; }
@@ -173,9 +170,7 @@
             "VND": { en: "Vietnam", cn: "越南", flag: "🇻🇳" }
         };
 
-        let themeIdx = 0, expr = '', result = 0, activeCode = 'TWD';
-        let myFavs = ['TWD', 'USD', 'EUR', 'JPY', 'CZK'];
-        let rates = {};
+        let themeIdx = 0, expr = '', result = 0, activeCode = 'TWD', myFavs = ['TWD', 'USD', 'EUR', 'JPY', 'CZK'], rates = {};
 
         function loadSettings() {
             const savedFavs = localStorage.getItem('white6-favs'), savedActive = localStorage.getItem('white6-active'), savedTheme = localStorage.getItem('saved-theme-idx');
@@ -289,10 +284,7 @@
         function closeMenu() { document.getElementById('menu').classList.add('hidden'); saveSettings(); renderSelector(); }
 
         window.onload = () => {
-            loadSettings();
-            initRates();
-            applyTheme();
-            updateUI();
+            loadSettings(); initRates(); applyTheme(); updateUI();
         };
     </script>
 </body>
