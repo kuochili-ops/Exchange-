@@ -47,7 +47,12 @@
             text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
         }
 
-        #val-display { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        /* 數字行加大與紅色優化 */
+        #val-display { 
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); 
+            color: #ff3b3b;
+            text-shadow: 0 0 12px rgba(255, 59, 59, 0.3);
+        }
         .val-flip { transform: translateY(-15px); opacity: 0; filter: blur(4px); }
 
         .country-tab {
@@ -81,7 +86,7 @@
                 <div id="history" class="text-right text-white/30 text-xs font-mono h-4 mb-1"></div>
                 <div class="flex justify-between items-end">
                     <span id="flag-display" class="text-4xl">🇹🇼</span>
-                    <div id="val-display" class="text-5xl font-black text-white font-mono tracking-tighter">0</div>
+                    <div id="val-display" class="text-6xl font-black font-mono tracking-tighter">0</div>
                 </div>
             </div>
 
@@ -147,7 +152,6 @@
         let expr = '';
         let result = 0;
         let activeCode = 'TWD';
-        // 初始設定為您指定的五個國家
         let myFavs = ['TWD', 'USD', 'EUR', 'JPY', 'CZK'];
         let rates = {};
 
@@ -155,7 +159,6 @@
             const savedFavs = localStorage.getItem('white6-favs');
             const savedActive = localStorage.getItem('white6-active');
             const savedTheme = localStorage.getItem('saved-theme-idx');
-            
             if (savedFavs) myFavs = JSON.parse(savedFavs);
             if (savedActive) activeCode = savedActive;
             if (savedTheme) themeIdx = parseInt(savedTheme);
